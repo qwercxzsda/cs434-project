@@ -30,6 +30,10 @@ object Master extends App {
 
   sendRanges
 
+  private val distributeCompleteRequests: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
+  private val distributeCompleteAllComplete: Promise[Unit] = Promise()
+  private val distributeCompleteWorkerIps: Future[List[String]] = getDistributeCompleteWorkerIps
+
   private class RegisterImpl extends RegisterServiceGrpc.RegisterService {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
       registerRequests add request
@@ -38,6 +42,17 @@ object Master extends App {
         registerAllComplete success()
       }
       Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
+    }
+  }
+
+  private class DistributeCompleteImpl extends DistributeCompleteServiceGrpc.DistributeCompleteService {
+    override def distributeComplete(request: DistributeCompleteRequest): Future[DistributeCompleteResponse] = {
+      distributeCompleteRequests add request.ip
+      if (distributeCompleteRequests.size >= workerNum) {
+        assert(distributeCompleteRequests.size == workerNum)
+        distributeCompleteAllComplete success()
+      }
+      Future(DistributeCompleteResponse(success = true))
     }
   }
 
@@ -66,5 +81,13 @@ object Master extends App {
     val workerIpRangeMap = (workerIpsVal zip rangesVal).toMap
     // TODO: implement
     ()
+  }
+
+  private def getDistributeCompleteWorkerIps: Future[List[String]] = async {
+    await(distributeCompleteAllComplete.future)
+    val workerIps = distributeCompleteRequests.asScala.toList.sorted
+    Check.workerIps(workerNum, workerIps)
+    assert(workerIps == await(this.workerIps), "getDistributeCompleteWorkerIps is not equal to workerIps")
+    workerIps
   }
 }
