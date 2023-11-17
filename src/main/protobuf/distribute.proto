@@ -1,0 +1,21 @@
+syntax = "proto3";
+import "record.proto";
+
+package com.blue.proto;
+
+/*
+ * 3. workerA -> workerB
+ * Worker sends data chunks to the designated worker.
+ */
+
+message DistributeRequest {
+  repeated Record records = 1;
+}
+
+message DistributeResponse {
+  bool success = 1;
+}
+
+service DistributeService {
+  rpc Distribute(DistributeRequest) returns (DistributeResponse);
+}
