@@ -28,6 +28,8 @@ object Master extends App {
   private val workerIps: Future[List[String]] = getWorkerIps
   private val ranges: Future[List[String]] = getRanges
 
+  sendRanges
+
   private class RegisterImpl extends RegisterServiceGrpc.RegisterService {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
       registerRequests add request
@@ -56,5 +58,13 @@ object Master extends App {
     val ranges = keys.sorted.grouped(portion).map(_.head).toList
     Check.ranges(workerNum, ranges)
     ranges
+  }
+
+  private def sendRanges: Future[Unit] = async {
+    val workerIpsVal = await(workerIps)
+    val rangesVal = await(ranges)
+    val workerIpRangeMap = (workerIpsVal zip rangesVal).toMap
+    // TODO: implement
+    ()
   }
 }
