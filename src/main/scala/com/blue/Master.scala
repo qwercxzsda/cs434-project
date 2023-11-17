@@ -34,6 +34,8 @@ object Master extends App {
   private val distributeCompleteAllComplete: Promise[Unit] = Promise()
   private val distributeCompleteWorkerIps: Future[List[String]] = getDistributeCompleteWorkerIps
 
+  sendSortStart
+
   private class RegisterImpl extends RegisterServiceGrpc.RegisterService {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
       registerRequests add request
@@ -89,5 +91,10 @@ object Master extends App {
     Check.workerIps(workerNum, workerIps)
     assert(workerIps == await(this.workerIps), "getDistributeCompleteWorkerIps is not equal to workerIps")
     workerIps
+  }
+
+  private def sendSortStart: Future[Unit] = async {
+    // TODO: implement
+    ()
   }
 }
