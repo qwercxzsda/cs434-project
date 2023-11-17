@@ -8,7 +8,7 @@ package com.blue.proto;
  */
 
 message DistributeStartRequest {
-  map<string, bytes> ranges = 1;  // map<worker_ip, range_begin_key>
+  map<string, string> ranges = 1;  // map<worker_ip, range_begin_key>
 }
 
 message DistributeStartResponse {

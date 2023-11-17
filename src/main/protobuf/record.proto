@@ -3,6 +3,6 @@ syntax = "proto3";
 package com.blue.proto;
 
 message Record {
-  bytes key = 1;
-  bytes value = 2;
+  string key = 1;
+  string value = 2;
 }
