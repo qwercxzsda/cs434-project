@@ -45,7 +45,7 @@ object Master extends App {
       registerRequests add request
       if (registerRequests.size >= workerNum) {
         assert(registerRequests.size == workerNum)
-        registerAllComplete success()
+        registerAllComplete trySuccess ()
       }
       Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
     }
@@ -56,7 +56,7 @@ object Master extends App {
       distributeCompleteRequests add request.ip
       if (distributeCompleteRequests.size >= workerNum) {
         assert(distributeCompleteRequests.size == workerNum)
-        distributeCompleteAllComplete success()
+        distributeCompleteAllComplete trySuccess ()
       }
       Future(DistributeCompleteResponse(success = true))
     }
