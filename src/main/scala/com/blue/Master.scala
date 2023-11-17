@@ -36,6 +36,10 @@ object Master extends App {
 
   sendSortStart
 
+  private val sortCompleteRequests: ConcurrentLinkedQueue[SortCompleteRequest] = new ConcurrentLinkedQueue[SortCompleteRequest]()
+  private val sortCompleteAllComplete: Promise[Unit] = Promise()
+  // TODO: print result and wait the main thread until sortCompleteAllComplete.future is completed
+
   private class RegisterImpl extends RegisterServiceGrpc.RegisterService {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
       registerRequests add request
