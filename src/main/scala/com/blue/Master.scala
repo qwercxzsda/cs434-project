@@ -25,6 +25,10 @@ object Master extends App {
 
   private val registerRequests: ConcurrentLinkedQueue[RegisterRequest] = new ConcurrentLinkedQueue[RegisterRequest]()
   private val registerAllComplete: Promise[Unit] = Promise()
+  private val registerServer = ServerBuilder.
+    forPort(NetworkConfig.registerPort).
+    addService(RegisterServiceGrpc.bindService(new RegisterImpl, ExecutionContext.global)).
+    build.start
   private val workerIps: Future[List[String]] = getWorkerIps
   private val ranges: Future[List[String]] = getRanges
 
@@ -32,6 +36,10 @@ object Master extends App {
 
   private val distributeCompleteRequests: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
   private val distributeCompleteAllComplete: Promise[Unit] = Promise()
+  private val distributeCompleteServer = ServerBuilder.
+    forPort(NetworkConfig.distributeCompletePort).
+    addService(DistributeCompleteServiceGrpc.bindService(new DistributeCompleteImpl, ExecutionContext.global)).
+    build.start
   private val distributeCompleteWorkerIps: Future[List[String]] = getDistributeCompleteWorkerIps
 
   sendSortStart
