@@ -4,7 +4,7 @@ import "record.proto";
 package com.blue.proto;
 
 /*
- * 1. Worker -> Master
+ * 1. worker -> master
  * Worker sends the request in order to register itself to the master.
  */
 
