@@ -28,7 +28,7 @@ object Master extends App {
   private val workerIps: Future[List[String]] = getWorkerIps
   private val ranges: Future[List[String]] = getRanges
 
-  sendRanges
+  sendDistributeStart
 
   private val distributeCompleteRequests: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
   private val distributeCompleteAllComplete: Promise[Unit] = Promise()
@@ -75,10 +75,10 @@ object Master extends App {
     ranges
   }
 
-  private def sendRanges: Future[Unit] = async {
-    val workerIpsVal = await(workerIps)
-    val rangesVal = await(ranges)
-    val workerIpRangeMap = (workerIpsVal zip rangesVal).toMap
+  private def sendDistributeStart: Future[Unit] = async {
+    val workerIps = await(this.workerIps)
+    val ranges = await(this.ranges)
+    val workerIpRangeMap = (workerIps zip ranges).toMap
     // TODO: implement
     ()
   }
