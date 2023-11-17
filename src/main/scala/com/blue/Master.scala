@@ -46,6 +46,10 @@ object Master extends App {
 
   private val sortCompleteRequests: ConcurrentLinkedQueue[SortCompleteRequest] = new ConcurrentLinkedQueue[SortCompleteRequest]()
   private val sortCompleteAllComplete: Promise[Unit] = Promise()
+  private val sortCompleteServer = ServerBuilder.
+    forPort(NetworkConfig.sortCompletePort).
+    addService(SortCompleteServiceGrpc.bindService(new SortCompleteImpl, ExecutionContext.global)).
+    build.start
   // TODO: print result and wait the main thread until sortCompleteAllComplete.future is completed
 
   private class RegisterImpl extends RegisterServiceGrpc.RegisterService {
@@ -67,6 +71,17 @@ object Master extends App {
         distributeCompleteAllComplete trySuccess ()
       }
       Future(DistributeCompleteResponse(success = true))
+    }
+  }
+
+  private class SortCompleteImpl extends SortCompleteServiceGrpc.SortCompleteService {
+    override def sortComplete(request: SortCompleteRequest): Future[SortCompleteResponse] = {
+      sortCompleteRequests add request
+      if (sortCompleteRequests.size >= workerNum) {
+        assert(sortCompleteRequests.size == workerNum)
+        sortCompleteAllComplete trySuccess()
+      }
+      Future(SortCompleteResponse(success = true))
     }
   }
 
