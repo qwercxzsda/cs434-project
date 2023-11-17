@@ -28,6 +28,17 @@ object Master extends App {
   private val workerIps: Future[List[String]] = getWorkerIps
   private val ranges: Future[List[String]] = getRanges
 
+  private class RegisterImpl extends RegisterServiceGrpc.RegisterService {
+    override def register(request: RegisterRequest): Future[RegisterResponse] = {
+      registerRequests add request
+      if (registerRequests.size >= workerNum) {
+        assert(registerRequests.size == workerNum)
+        registerAllComplete success()
+      }
+      Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
+    }
+  }
+
   private def getWorkerIps: Future[List[String]] = async {
     await(registerAllComplete.future)
     val workerIps = registerRequests.asScala.toList.map(_.ip)
