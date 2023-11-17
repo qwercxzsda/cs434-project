@@ -4,10 +4,10 @@ object Check {
   def workerIps(num: Int, ips: List[String]): Unit = {
     assert(num == ips.length, s"worker num is $num, but worker ips length is ${ips.length}")
 
-    // check duplicate
-    (ips foldLeft Set[String]())((acc, ip) => {
-      assert(!(acc contains ip), s"worker ips contains duplicate ip: $ip")
-      acc + ip
+    // check strongly increasing(This also checks duplicate)
+    (ips foldLeft "")((acc, ip) => {
+      assert(acc < ip, s"worker ips is not strongly increasing: $acc, $ip")
+      ip
     })
   }
 

@@ -41,7 +41,7 @@ object Master extends App {
 
   private def getWorkerIps: Future[List[String]] = async {
     await(registerAllComplete.future)
-    val workerIps = registerRequests.asScala.toList.map(_.ip)
+    val workerIps = registerRequests.asScala.toList.map(_.ip).sorted
     Check.workerIps(workerNum, workerIps)
     workerIps
   }
