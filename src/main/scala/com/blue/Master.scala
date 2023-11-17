@@ -12,9 +12,10 @@ import com.blue.check.Check
 
 import com.google.protobuf.ByteString
 import io.grpc.{Server, ServerBuilder}
-import scala.jdk.CollectionConverters._
-import java.util.concurrent.ConcurrentLinkedQueue
+import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 
+import java.util.concurrent.ConcurrentLinkedQueue
+import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
@@ -109,6 +110,14 @@ object Master extends App {
     val ranges = await(this.ranges)
     val workerIpRangeMap = (workerIps zip ranges).toMap
     // TODO: implement
+    val channels = workerIps map { ip =>
+      ManagedChannelBuilder.forAddress(ip, NetworkConfig.distributeStartPort).usePlaintext().build
+    }
+    val stubs: List[DistributeStartServiceGrpc.DistributeStartServiceStub] =
+      channels map DistributeStartServiceGrpc.stub
+    val request: DistributeStartRequest = DistributeStartRequest(ranges = workerIpRangeMap)
+    val responses: List[Future[DistributeStartResponse]] = stubs map (_.distributeStart(request))
+    // No need to wait for responses
     ()
   }
 
