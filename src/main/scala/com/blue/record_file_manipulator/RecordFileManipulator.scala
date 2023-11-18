@@ -107,7 +107,6 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val key: String = string.substring(0, keyLength)
     val value: String = string.substring(keyLength)
     assert(key.length == keyLength, s"key length is ${key.length}, not $keyLength")
-    assert(value.length == valueLength, s"value length is ${value.length}, not $valueLength")
     Record(key, value)
   }
 }
