@@ -88,9 +88,10 @@ object Worker extends App {
 
   // Send Register request to master
   private def sendRegister: Future[Unit] = async {
+    val samples = await(this.samples)
     val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
-    val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = await(samples))
+    val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
     assert(await(response).ip == masterIp, s"sendRegisterResponse ip is not $masterIp")
     ()
