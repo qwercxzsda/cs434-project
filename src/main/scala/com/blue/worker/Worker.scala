@@ -78,7 +78,8 @@ object Worker extends App {
   }
 
   private def getMasterIp: String = {
-    assert(args(0).substring(args(0).indexOf(":")) == NetworkConfig.port.toString, s"input master port is not ${NetworkConfig.port}")
+    val port: String = args(0).substring(args(0).indexOf(":")).drop(1)
+    assert(port == NetworkConfig.port.toString, s"input master port is $port, not ${NetworkConfig.port}")
     args(0).substring(0, args(0).indexOf(":"))
   }
 
@@ -93,7 +94,7 @@ object Worker extends App {
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
-    assert(await(response).ip == masterIp, s"sendRegisterResponse ip is not $masterIp")
+    assert(await(response).ip == masterIp, s"sendRegisterResponse ip is ${await(response).ip}, not $masterIp")
     ()
   }
 

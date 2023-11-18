@@ -59,7 +59,7 @@ object Master extends App {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
       registerRequests add request
       if (registerRequests.size >= workerNum) {
-        assert(registerRequests.size == workerNum)
+        assert(registerRequests.size == workerNum, s"registerRequests.size is ${registerRequests.size}, not $workerNum")
         registerAllComplete trySuccess ()
       }
       Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
@@ -68,7 +68,7 @@ object Master extends App {
     override def distributeComplete(request: DistributeCompleteRequest): Future[DistributeCompleteResponse] = {
       distributeCompleteRequests add request.ip
       if (distributeCompleteRequests.size >= workerNum) {
-        assert(distributeCompleteRequests.size == workerNum)
+        assert(distributeCompleteRequests.size == workerNum, s"distributeCompleteRequests.size is ${distributeCompleteRequests.size}, not $workerNum")
         distributeCompleteAllComplete trySuccess ()
       }
       Future(DistributeCompleteResponse(success = true))
@@ -77,7 +77,7 @@ object Master extends App {
     override def sortComplete(request: SortCompleteRequest): Future[SortCompleteResponse] = {
       sortCompleteRequests add request
       if (sortCompleteRequests.size >= workerNum) {
-        assert(sortCompleteRequests.size == workerNum)
+        assert(sortCompleteRequests.size == workerNum, s"sortCompleteRequests.size is ${sortCompleteRequests.size}, not $workerNum")
         sortCompleteAllComplete trySuccess ()
       }
       Future(SortCompleteResponse(success = true))
@@ -121,7 +121,7 @@ object Master extends App {
     await(distributeCompleteAllComplete.future)
     val workerIps = distributeCompleteRequests.asScala.toList.sorted
     Check.workerIps(workerNum, workerIps)
-    assert(workerIps == await(this.workerIps), "getDistributeCompleteWorkerIps is not equal to workerIps")
+    assert(workerIps == await(this.workerIps), s"getDistributeCompleteWorkerIps is $workerIps, not ${await(this.workerIps)}")
     workerIps
   }
 
