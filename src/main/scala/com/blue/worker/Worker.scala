@@ -30,7 +30,7 @@ object Worker extends App {
   // TODO: should take multiple input directories
   private val inputDirectories: List[String] = List(args(2))
   private val outputDirectory: String = args(4)
-  private val samples: List[Record] = getSamples
+  private val samples: Future[List[Record]] = getSamples
 
   sendRegister
 
@@ -81,7 +81,7 @@ object Worker extends App {
     args(0).substring(0, args(0).indexOf(":"))
   }
 
-  private def getSamples: List[Record] = {
+  private def getSamples: Future[List[Record]] = async {
     // TODO: implement
     List()
   }
@@ -89,7 +89,7 @@ object Worker extends App {
   private def sendRegister: Future[Unit] = async {
     val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
-    val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
+    val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = await(samples))
     val response: Future[RegisterResponse] = stub.register(request)
     assert(await(response).ip == masterIp, s"sendRegisterResponse ip is not $masterIp")
     ()
