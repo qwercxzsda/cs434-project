@@ -108,8 +108,7 @@ object Master extends App {
   private def sendDistributeStart: Future[Unit] = async {
     val workerIps = await(this.workerIps)
     val ranges = await(this.ranges)
-    val workerIpRangeMap = (workerIps zip ranges).toMap
-    // TODO: implement
+    val workerIpRangeMap: Map[String, String] = (workerIps zip ranges).toMap
     val channels = workerIps map { ip =>
       ManagedChannelBuilder.forAddress(ip, NetworkConfig.distributeStartPort).usePlaintext().build
     }
