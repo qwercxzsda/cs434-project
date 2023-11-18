@@ -37,6 +37,8 @@ object Worker extends App {
 
   private val distributeStartComplete: Promise[Map[String, String]] = Promise()
 
+  sendDistribute
+
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
       distributeStartComplete success request.ranges
@@ -60,6 +62,12 @@ object Worker extends App {
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
     assert(await(response).ip == masterIp, s"sendRegisterResponse ip is not $masterIp")
+    ()
+  }
+
+  private def sendDistribute: Future[Unit] = async {
+    // TODO: implement
+    await(distributeStartComplete.future)
     ()
   }
 }
