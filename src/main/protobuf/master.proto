@@ -1,0 +1,13 @@
+syntax = "proto3";
+import "record.proto";
+import "register.proto";
+import "distribute.proto";
+import "sort.proto";
+
+package com.blue.proto;
+
+service Master {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc DistributeComplete(DistributeCompleteRequest) returns (DistributeCompleteResponse);
+  rpc SortComplete(SortCompleteRequest) returns (SortCompleteResponse);
+}

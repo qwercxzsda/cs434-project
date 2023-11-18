@@ -16,10 +16,6 @@ message DistributeStartResponse {
   bool success = 1;
 }
 
-service DistributeStartService {
-  rpc DistributeStart(DistributeStartRequest) returns (DistributeStartResponse);
-}
-
 /*
  * 3. workerA -> workerB
  * Worker sends data chunks to the designated worker.
@@ -33,10 +29,6 @@ message DistributeResponse {
   bool success = 1;
 }
 
-service DistributeService {
-  rpc Distribute(DistributeRequest) returns (DistributeResponse);
-}
-
 /*
  * 4. worker -> master
  * Worker acknowledges master that it finished distributing all the data.
@@ -48,8 +40,4 @@ message DistributeCompleteRequest {
 
 message DistributeCompleteResponse {
   bool success = 1;
-}
-
-service DistributeCompleteService {
-  rpc DistributeComplete(DistributeCompleteRequest) returns (DistributeCompleteResponse);
 }

@@ -17,7 +17,3 @@ message RegisterResponse {
   string ip = 1;
   bool success = 2;
 }
-
-service RegisterService {
-  rpc Register(RegisterRequest) returns (RegisterResponse);
-}

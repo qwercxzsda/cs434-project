@@ -16,10 +16,6 @@ message SortStartResponse {
   bool success = 1;
 }
 
-service SortStartService {
-  rpc SortStart(SortStartRequest) returns (SortStartResponse);
-}
-
 /*
  * 6. worker -> master
  * Worker acknowledges master that it finished sorting
@@ -33,8 +29,4 @@ message SortCompleteRequest {
 
 message SortCompleteResponse {
   bool success = 1;
-}
-
-service SortCompleteService {
-  rpc SortComplete(SortCompleteRequest) returns (SortCompleteResponse);
 }
