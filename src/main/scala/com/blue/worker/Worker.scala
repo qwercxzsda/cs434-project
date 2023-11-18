@@ -8,6 +8,7 @@ import com.blue.proto.master._
 import com.blue.proto.worker._
 
 import com.blue.network.NetworkConfig
+import com.blue.record_file.RecordFile
 import com.blue.check.Check
 
 import com.google.protobuf.ByteString
@@ -30,6 +31,7 @@ object Worker extends App {
   // TODO: should take multiple input directories
   private val inputDirectories: List[String] = List(args(2))
   private val outputDirectory: String = args(4)
+  private val recordFile: RecordFile = new RecordFile(inputDirectories, outputDirectory)
   private val samples: Future[List[Record]] = getSamples
 
   sendRegister
@@ -66,7 +68,7 @@ object Worker extends App {
 
     override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
       val records = request.records
-      // TODO: save records to file
+      recordFile saveDistributedRecords records
       Future(DistributeResponse(success = true))
     }
 
