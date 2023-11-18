@@ -1,4 +1,4 @@
-package com.blue.record_file
+package com.blue.record_file_manipulator
 
 import com.blue.proto.record._
 
@@ -6,7 +6,7 @@ import java.io.{File, FileWriter}
 import java.nio.file.{Files, Paths}
 import scala.io._
 
-class RecordFile(inputDirectories: List[String], outputDirectory: String) {
+class RecordFileManipulator(inputDirectories: List[String], outputDirectory: String) {
   private val sampleNum: Int = 10
   private val keyLength: Int = 10
   private val valueLength: Int = 90

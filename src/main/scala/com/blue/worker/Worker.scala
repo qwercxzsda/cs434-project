@@ -8,7 +8,7 @@ import com.blue.proto.master._
 import com.blue.proto.worker._
 
 import com.blue.network.NetworkConfig
-import com.blue.record_file.RecordFile
+import com.blue.record_file_manipulator.RecordFileManipulator
 import com.blue.check.Check
 
 import com.google.protobuf.ByteString
@@ -31,7 +31,7 @@ object Worker extends App {
   // TODO: should take multiple input directories
   private val inputDirectories: List[String] = List(args(2))
   private val outputDirectory: String = args(4)
-  private val recordFile: RecordFile = new RecordFile(inputDirectories, outputDirectory)
+  private val recordFileManipulator: RecordFileManipulator = new RecordFileManipulator(inputDirectories, outputDirectory)
   private val samples: Future[List[Record]] = getSamples
 
   sendRegister
@@ -68,7 +68,7 @@ object Worker extends App {
 
     override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
       val records = request.records
-      recordFile saveDistributedRecords records
+      recordFileManipulator saveDistributedRecords records
       Future(DistributeResponse(success = true))
     }
 
@@ -84,7 +84,7 @@ object Worker extends App {
   }
 
   private def getSamples: Future[List[Record]] = async {
-    recordFile.getSamples
+    recordFileManipulator.getSamples
   }
 
   // Send Register request to master
@@ -122,7 +122,7 @@ object Worker extends App {
   // Start the sort process after sortStartComplete.future is completed
   private def sort: Future[Unit] = async {
     await(sortStartComplete.future)
-    recordFile.sortDistributedRecords()
+    recordFileManipulator.sortDistributedRecords()
   }
 
   // Send SortComplete request to master
