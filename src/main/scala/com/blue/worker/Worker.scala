@@ -44,8 +44,19 @@ object Worker extends App {
 
   private val sortComplete: Future[Unit] = sort
 
-  sendSortComplete
+  private val workerComplete: Future[Unit] = sendSortComplete
 
+  private val server = ServerBuilder.
+    forPort(NetworkConfig.port).
+    addService(WorkerGrpc.bindService(new WorkerImpl, ExecutionContext.global)).
+    build.start
+
+  // TODO: verify sort results, use logging
+  /* All the code above executes asynchronously.
+   * As as result, this part of code is reached immediately.
+   */
+  println(s"Worker server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
+  private val result: Unit = Await.result(workerComplete, Duration.Inf)
 
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
