@@ -121,9 +121,8 @@ object Worker extends App {
   // Sort the records that is distributed(shuffled) to this worker
   // Start the sort process after sortStartComplete.future is completed
   private def sort: Future[Unit] = async {
-    // TODO: implement
     await(sortStartComplete.future)
-    ()
+    recordFile.sortDistributedRecords()
   }
 
   // Send SortComplete request to master

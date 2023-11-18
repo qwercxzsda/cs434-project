@@ -59,8 +59,12 @@ class RecordFile(inputDirectories: List[String], outputDirectory: String) {
     samples
   }
 
-  // sort files in input path and save in temp path
-  def sort(inputPath: String, outputPath: String): Unit = {
+  def sortDistributedRecords(): Unit = {
+    sort(distributedPath, outputPath)
+  }
+
+  // sort files in input path and save in output path
+  private def sort(inputPath: String, outputPath: String): Unit = {
     // TODO: this implementation only works for data fitting in memory
     val inputSource: BufferedSource = scala.io.Source.fromFile(inputPath)
     val inputIterator: Iterator[String] = inputSource.getLines()
