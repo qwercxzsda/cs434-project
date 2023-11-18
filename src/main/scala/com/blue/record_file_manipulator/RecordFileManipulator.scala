@@ -20,15 +20,6 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   Files.deleteIfExists(Paths.get(inputSortedPath))
   Files.deleteIfExists(Paths.get(distributedPath))
 
-  //  private val outputWriter: FileWriter = new FileWriter(new File(outputPath))
-  //  outputWriter.close()
-  //  private val tempWriter: FileWriter = new FileWriter(new File(tempPath))
-  //  tempWriter.close()
-  //
-  //  private val inputSource: BufferedSource = scala.io.Source.fromFile(inputPath)
-  //  private val inputIterator: Iterator[String] = inputSource.getLines()
-  //  inputSource.close()
-
   def saveDistributedRecords(records: Seq[Record]): Unit = {
     val distributedWriter: FileWriter = new FileWriter(new File(distributedPath), true)
     try {
