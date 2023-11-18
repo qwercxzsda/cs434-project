@@ -6,7 +6,8 @@ scalaVersion := "2.13.12"
 
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
-  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
+  "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
+  "org.scalatest" %% "scalatest" % "3.2.15" % Test
 )
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-async" % "1.0.1"
