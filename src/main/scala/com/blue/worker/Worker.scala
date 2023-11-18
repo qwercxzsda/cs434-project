@@ -35,6 +35,15 @@ object Worker extends App {
 
   sendRegister
 
+  private val distributeStartComplete: Promise[Map[String, String]] = Promise()
+
+  private class WorkerImpl extends WorkerGrpc.Worker {
+    override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
+      distributeStartComplete success request.ranges
+      Future(DistributeStartResponse(success = true))
+    }
+  }
+
   private def getMasterIp: String = {
     assert(args(0).substring(args(0).indexOf(":")) == NetworkConfig.port.toString, s"input master port is not ${NetworkConfig.port}")
     args(0).substring(0, args(0).indexOf(":"))
