@@ -86,6 +86,7 @@ object Worker extends App {
     List()
   }
 
+  // Send Register request to master
   private def sendRegister: Future[Unit] = async {
     val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
@@ -95,24 +96,32 @@ object Worker extends App {
     ()
   }
 
+  // Send Distribute(i.e., send block of records) request to designated worker
+  // This distributes(shuffles) records among workers
   private def sendDistribute: Future[Unit] = async {
     // TODO: implement
     await(distributeStartComplete.future)
     ()
   }
 
+  // Send DistributeComplete request to master
+  // This notifies master that this worker has finished distributing all records
   private def sendDistributeComplete: Future[Unit] = async {
     // TODO: implement
     await(distributeComplete)
     ()
   }
 
+  // Sort the records that is distributed(shuffled) to this worker
+  // Start the sort process after sortStartComplete.future is completed
   private def sort: Future[Unit] = async {
     // TODO: implement
     await(sortStartComplete.future)
     ()
   }
 
+  // Send SortComplete request to master
+  // This notifies master that this worker has finished sorting all records that is distributed(shuffled)
   private def sendSortComplete: Future[Unit] = async {
     // TODO: implement
     await(sortComplete)
