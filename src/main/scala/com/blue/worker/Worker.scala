@@ -133,7 +133,6 @@ object Worker extends App {
     }
     // Must wait for response
     // If not, the worker will start sorting before all records are distributed
-    // TODO: also wait for file write to finish(in service distribute)?
     await(Future.sequence(distributeResponses))
     println(s"Worker sent DistributeRequest to all workers")
     ()
