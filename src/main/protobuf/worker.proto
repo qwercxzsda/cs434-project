@@ -1,0 +1,11 @@
+syntax = "proto3";
+import "distribute.proto";
+import "sort.proto";
+
+package com.blue.proto;
+
+service Worker {
+  rpc DistributeStart(DistributeStartRequest) returns (DistributeStartResponse);
+  rpc Distribute(DistributeRequest) returns (DistributeResponse);
+  rpc SortStart(SortStartRequest) returns (SortStartResponse);
+}

@@ -4,6 +4,19 @@ import "record.proto";
 package com.blue.proto;
 
 /*
+ * 5. master -> worker
+ * Master acknowledges worker to start sorting
+ */
+
+message SortStartRequest {
+  bool success = 1;
+}
+
+message SortStartResponse {
+  bool success = 1;
+}
+
+/*
  * 6. worker -> master
  * Worker acknowledges master that it finished sorting
  */
@@ -16,8 +29,4 @@ message SortCompleteRequest {
 
 message SortCompleteResponse {
   bool success = 1;
-}
-
-service SortCompleteService {
-  rpc SortComplete(SortCompleteRequest) returns (SortCompleteResponse);
 }
