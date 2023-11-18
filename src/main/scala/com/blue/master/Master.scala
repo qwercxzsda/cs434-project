@@ -131,7 +131,7 @@ object Master extends App {
       ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
     }
     val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
-    val request: SortStartRequest = SortStartRequest()
+    val request: SortStartRequest = SortStartRequest(success = true)
     val responses: List[Future[SortStartResponse]] = stubs map (_.sortStart(request))
     // no need to wait for responses
     ()
