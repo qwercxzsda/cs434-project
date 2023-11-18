@@ -80,7 +80,7 @@ object Master extends App {
       sortCompleteRequests add request
       if (sortCompleteRequests.size >= workerNum) {
         assert(sortCompleteRequests.size == workerNum)
-        sortCompleteAllComplete trySuccess()
+        sortCompleteAllComplete trySuccess ()
       }
       Future(SortCompleteResponse(success = true))
     }
