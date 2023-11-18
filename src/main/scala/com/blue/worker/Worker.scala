@@ -110,25 +110,31 @@ object Worker extends App {
     val workerIps: List[String] = ranges.keys.toList
     val rangeBegins: List[String] = ranges.values.toList
     val (recordsToDistribute: Iterator[Record], toClose: BufferedSource) = recordFileManipulator.getRecordsToDistribute
-    try {
+    val distributeResponses = try {
       val channels = workerIps map { ip =>
         ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
       }
       val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
       val rangeBegin_stubs: List[(String, WorkerGrpc.WorkerStub)] = rangeBegins zip stubs
-      def distributeOneRecord(record: Record): Unit = {
+
+      def distributeOneRecord(record: Record): Future[DistributeResponse] = {
         val key = record.key
         // send to the last worker whose rangeBegin is greater than or equal to the key
         val stub = (rangeBegin_stubs findLast (rangeBegin_stub => key >= rangeBegin_stub._1)).get._2
         // TODO: send blocks of records for efficiency
         val request: DistributeRequest = DistributeRequest(records = Seq(record))
         val response: Future[DistributeResponse] = stub.distribute(request)
+        response
       }
 
-      recordsToDistribute foreach distributeOneRecord
+      recordsToDistribute map distributeOneRecord
     } finally {
       recordFileManipulator.closeRecordsToDistribute(toClose)
     }
+    // Must wait for response
+    // If not, the worker will start sorting before all records are distributed
+    // TODO: also wait for file write to finish(in service distribute)?
+    await(Future.sequence(distributeResponses))
     println(s"Worker sent DistributeRequest to all workers")
     ()
   }
@@ -164,7 +170,8 @@ object Worker extends App {
     val request: SortCompleteRequest =
       SortCompleteRequest(ip = NetworkConfig.ip, begin = Option(sortResult._1), end = Option(sortResult._2))
     val response: Future[SortCompleteResponse] = stub.sortComplete(request)
-    // No need to wait for response
+    // Must wait for response
+    await(response)
     println(s"Worker sent SortCompleteRequest to master")
     ()
   }
