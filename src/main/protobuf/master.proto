@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "record.proto";
 import "register.proto";
 import "distribute.proto";
 import "sort.proto";
