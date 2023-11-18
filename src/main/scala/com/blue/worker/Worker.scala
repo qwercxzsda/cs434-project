@@ -6,14 +6,12 @@ import com.blue.proto.distribute._
 import com.blue.proto.sort._
 import com.blue.proto.master._
 import com.blue.proto.worker._
-
 import com.blue.network.NetworkConfig
 import com.blue.record_file_manipulator.RecordFileManipulator
 import com.blue.check.Check
-
 import com.google.protobuf.ByteString
 import io.grpc.{Server, ServerBuilder}
-import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
+import io.grpc.{ManagedChannel, ManagedChannelBuilder, StatusRuntimeException}
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
@@ -23,6 +21,7 @@ import scala.async.Async.{async, await}
 import scala.util.{Failure, Success}
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.io.BufferedSource
 
 object Worker extends App {
   private val masterIp: String = getMasterIp
@@ -101,8 +100,29 @@ object Worker extends App {
   // Send Distribute(i.e., send block of records) request to designated worker
   // This distributes(shuffles) records among workers
   private def sendDistribute: Future[Unit] = async {
-    // TODO: implement
-    await(distributeStartComplete.future)
+    val ranges: Map[String, String] = await(distributeStartComplete.future)
+    val workerIps: List[String] = ranges.keys.toList
+    val rangeBegins: List[String] = ranges.values.toList
+    val (recordsToDistribute: Iterator[Record], toClose: BufferedSource) = recordFileManipulator.getRecordsToDistribute
+    try {
+      val channels = workerIps map { ip =>
+        ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
+      }
+      val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
+      val rangeBegin_stubs: List[(String, WorkerGrpc.WorkerStub)] = rangeBegins zip stubs
+      def distributeOneRecord(record: Record): Unit = {
+        val key = record.key
+        // send to the last worker whose rangeBegin is greater than or equal to the key
+        val stub = (rangeBegin_stubs findLast (rangeBegin_stub => key >= rangeBegin_stub._1)).get._2
+        // TODO: send blocks of records for efficiency
+        val request: DistributeRequest = DistributeRequest(records = Seq(record))
+        val response: Future[DistributeResponse] = stub.distribute(request)
+      }
+
+      recordsToDistribute foreach distributeOneRecord
+    } finally {
+      recordFileManipulator.closeRecordsToDistribute(toClose)
+    }
     ()
   }
 
