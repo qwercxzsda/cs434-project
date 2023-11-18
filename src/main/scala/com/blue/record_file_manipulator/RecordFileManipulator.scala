@@ -46,13 +46,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val inputSortedIterator: Iterator[String] = inputSortedSource.getLines()
     val samples: List[Record] = try {
       val samplesString: List[String] = inputSortedIterator.take(sampleNum).toList
-      samplesString map (line => {
-        val key: String = line.substring(0, keyLength)
-        val value: String = line.substring(keyLength)
-        assert(key.length == keyLength)
-        assert(value.length == valueLength)
-        Record(key, value)
-      })
+      samplesString map stringToRecord
     } finally {
       inputSortedSource.close()
     }
@@ -61,6 +55,18 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   def sortDistributedRecords(): Unit = {
     sort(distributedPath, outputPath)
+  }
+
+  def getSortResult: (Record, Record) = {
+    // TODO: this implementation only works for data fitting in memory
+    val outputSource: BufferedSource = scala.io.Source.fromFile(outputPath)
+    val outputIterator: Iterator[String] = outputSource.getLines()
+    try {
+      val recordsString: List[String] = outputIterator.toList
+      (stringToRecord(recordsString.head), stringToRecord(recordsString.last))
+    } finally {
+      outputSource.close()
+    }
   }
 
   // sort files in input path and save in output path
@@ -82,5 +88,13 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     } finally {
       outputWriter.close()
     }
+  }
+
+  private def stringToRecord(string: String): Record = {
+    val key: String = string.substring(0, keyLength)
+    val value: String = string.substring(keyLength)
+    assert(key.length == keyLength, s"key length is ${key.length}, not $keyLength")
+    assert(value.length == valueLength, s"value length is ${value.length}, not $valueLength")
+    Record(key, value)
   }
 }

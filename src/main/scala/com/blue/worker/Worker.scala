@@ -128,8 +128,14 @@ object Worker extends App {
   // Send SortComplete request to master
   // This notifies master that this worker has finished sorting all records that is distributed(shuffled)
   private def sendSortComplete: Future[Unit] = async {
-    // TODO: implement
     await(sortComplete)
+    val sortResult: (Record, Record) = recordFileManipulator.getSortResult
+    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
+    val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
+    val request: SortCompleteRequest =
+      SortCompleteRequest(ip = NetworkConfig.ip, begin = Option(sortResult._1), end = Option(sortResult._2))
+    val response: Future[SortCompleteResponse] = stub.sortComplete(request)
+    // No need to wait for response
     ()
   }
 }
