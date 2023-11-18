@@ -84,8 +84,7 @@ object Worker extends App {
   }
 
   private def getSamples: Future[List[Record]] = async {
-    // TODO: implement
-    List()
+    recordFile.getSamples
   }
 
   // Send Register request to master
