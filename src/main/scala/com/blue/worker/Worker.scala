@@ -46,6 +46,12 @@ object Worker extends App {
       distributeStartComplete success request.ranges
       Future(DistributeStartResponse(success = true))
     }
+
+    override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
+      val records = request.records
+      // TODO: save records to file
+      Future(DistributeResponse(success = true))
+    }
   }
 
   private def getMasterIp: String = {
