@@ -23,7 +23,9 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   println(s"RecordFileManipulator instantiated with inputPath: $inputPath, outputPath: $outputPath, inputSortedPath: $inputSortedPath, distributedPath: $distributedPath")
 
   def saveDistributedRecords(records: Seq[Record]): Unit = {
-    val distributedWriter: FileWriter = new FileWriter(new File(distributedPath), true)
+    val file: File = new File(distributedPath)
+    if (!file.exists) file.createNewFile
+    val distributedWriter: FileWriter = new FileWriter(file, true)
     try {
       records foreach (record => distributedWriter.write(record.key + record.value + "\n"))
     } finally {
@@ -89,7 +91,9 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val sortedRecords: List[String] = records.sorted
     println(s"RecordFileManipulator.sort: records sorted, sortedRecords.length: ${sortedRecords.length}")
 
-    val outputWriter: FileWriter = new FileWriter(new File(outputPath))
+    val file: File = new File(outputPath)
+    if (!file.exists) file.createNewFile
+    val outputWriter: FileWriter = new FileWriter(file)
     println(s"RecordFileManipulator.sort: output writer created")
     try {
       sortedRecords foreach (record => outputWriter.write(record + "\n"))
