@@ -62,17 +62,20 @@ object Worker extends App {
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
       distributeStartComplete success request.ranges
+      println(s"Worker received DistributeStartRequest with ranges: ${request.ranges}")
       Future(DistributeStartResponse(success = true))
     }
 
     override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
       val records = request.records
       recordFileManipulator saveDistributedRecords records
+      println(s"Worker received DistributeRequest with ${records.size} records")
       Future(DistributeResponse(success = true))
     }
 
     override def sortStart(request: SortStartRequest): Future[SortStartResponse] = {
       sortStartComplete success ()
+      println(s"Worker received SortStartRequest")
       Future(SortStartResponse(success = true))
     }
   }
@@ -84,6 +87,7 @@ object Worker extends App {
   }
 
   private def getSamples: Future[List[Record]] = async {
+    println(s"Worker started sampling")
     recordFileManipulator.getSamples
   }
 
@@ -95,6 +99,7 @@ object Worker extends App {
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
     assert(await(response).ip == masterIp)
+    println(s"Worker sent RegisterRequest to master")
     ()
   }
 
@@ -124,6 +129,7 @@ object Worker extends App {
     } finally {
       recordFileManipulator.closeRecordsToDistribute(toClose)
     }
+    println(s"Worker sent DistributeRequest to all workers")
     ()
   }
 
@@ -136,6 +142,7 @@ object Worker extends App {
     val request: DistributeCompleteRequest = DistributeCompleteRequest(ip = NetworkConfig.ip)
     val response: Future[DistributeCompleteResponse] = stub.distributeComplete(request)
     // No need to wait for response
+    println(s"Worker sent DistributeCompleteRequest to master")
     ()
   }
 
@@ -143,6 +150,7 @@ object Worker extends App {
   // Start the sort process after sortStartComplete.future is completed
   private def sort: Future[Unit] = async {
     await(sortStartComplete.future)
+    println(s"Worker started sorting")
     recordFileManipulator.sortDistributedRecords()
   }
 
@@ -157,6 +165,7 @@ object Worker extends App {
       SortCompleteRequest(ip = NetworkConfig.ip, begin = Option(sortResult._1), end = Option(sortResult._2))
     val response: Future[SortCompleteResponse] = stub.sortComplete(request)
     // No need to wait for response
+    println(s"Worker sent SortCompleteRequest to master")
     ()
   }
 }

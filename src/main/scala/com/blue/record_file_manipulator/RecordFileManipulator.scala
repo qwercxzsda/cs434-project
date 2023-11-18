@@ -20,6 +20,8 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   Files.deleteIfExists(Paths.get(inputSortedPath))
   Files.deleteIfExists(Paths.get(distributedPath))
 
+  println(s"RecordFileManipulator instantiated with inputPath: $inputPath, outputPath: $outputPath, inputSortedPath: $inputSortedPath, distributedPath: $distributedPath")
+
   def saveDistributedRecords(records: Seq[Record]): Unit = {
     val distributedWriter: FileWriter = new FileWriter(new File(distributedPath), true)
     try {
@@ -32,6 +34,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   def getSamples: List[Record] = {
     // Must input sort when taking samples!!
     sort(inputPath, inputSortedPath)
+    println(s"RecordFileManipulator.getSamples: input sorted")
 
     val inputSortedSource: BufferedSource = scala.io.Source.fromFile(inputSortedPath)
     val inputSortedIterator: Iterator[String] = inputSortedSource.getLines()
@@ -81,15 +84,19 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     } finally {
       inputSource.close()
     }
+    println(s"RecordFileManipulator.sort: input read")
 
     val sortedRecords: List[String] = records.sorted
+    println(s"RecordFileManipulator.sort: records sorted, sortedRecords.length: ${sortedRecords.length}")
 
     val outputWriter: FileWriter = new FileWriter(new File(outputPath))
+    println(s"RecordFileManipulator.sort: output writer created")
     try {
       sortedRecords foreach (record => outputWriter.write(record + "\n"))
     } finally {
       outputWriter.close()
     }
+    println(s"RecordFileManipulator.sort: output written")
   }
 
   private def stringToRecord(string: String): Record = {
