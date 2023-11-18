@@ -47,7 +47,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   def getRecordsToDistribute: (Iterator[Record], BufferedSource) = {
     val inputSortedSource: BufferedSource = scala.io.Source.fromFile(inputSortedPath)
     val inputSortedIterator: Iterator[String] = inputSortedSource.getLines()
-    val recordsToDistribute: Iterator[Record] = inputSortedSource map stringToRecord
+    val recordsToDistribute: Iterator[Record] = inputSortedIterator map stringToRecord
     (recordsToDistribute, inputSortedSource)
   }
 
