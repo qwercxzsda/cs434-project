@@ -37,7 +37,9 @@ object Worker extends App {
 
   private val distributeStartComplete: Promise[Map[String, String]] = Promise()
 
-  sendDistribute
+  private val distributeComplete: Future[Unit] = sendDistribute
+
+  sendDistributeComplete
 
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
@@ -68,6 +70,12 @@ object Worker extends App {
   private def sendDistribute: Future[Unit] = async {
     // TODO: implement
     await(distributeStartComplete.future)
+    ()
+  }
+
+  private def sendDistributeComplete: Future[Unit] = async {
+    // TODO: implement
+    await(distributeComplete)
     ()
   }
 }
