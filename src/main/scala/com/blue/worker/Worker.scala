@@ -39,6 +39,7 @@ object Worker extends App {
     assert(args(0).substring(args(0).indexOf(":")) == NetworkConfig.port.toString, s"input master port is not ${NetworkConfig.port}")
     args(0).substring(0, args(0).indexOf(":"))
   }
+
   private def getSamples: List[Record] = {
     // TODO: implement
     List()
@@ -49,7 +50,7 @@ object Worker extends App {
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
-    // No need to wait for response
+    assert(await(response).ip == masterIp, s"sendRegisterResponse ip is not $masterIp")
     ()
   }
 }
