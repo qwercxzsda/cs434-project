@@ -4,6 +4,23 @@ import "record.proto";
 package com.blue.proto;
 
 /*
+ * 2. master -> worker
+ * Master sends ranges and acknowledges worker to start distributing
+ */
+
+message DistributeStartRequest {
+  map<string, string> ranges = 1;  // map<worker_ip, range_begin_key>
+}
+
+message DistributeStartResponse {
+  bool success = 1;
+}
+
+service DistributeStartService {
+  rpc DistributeStart(DistributeStartRequest) returns (DistributeStartResponse);
+}
+
+/*
  * 3. workerA -> workerB
  * Worker sends data chunks to the designated worker.
  */
@@ -18,4 +35,21 @@ message DistributeResponse {
 
 service DistributeService {
   rpc Distribute(DistributeRequest) returns (DistributeResponse);
+}
+
+/*
+ * 4. worker -> master
+ * Worker acknowledges master that it finished distributing all the data.
+ */
+
+message DistributeCompleteRequest {
+  string ip = 1;
+}
+
+message DistributeCompleteResponse {
+  bool success = 1;
+}
+
+service DistributeCompleteService {
+  rpc DistributeComplete(DistributeCompleteRequest) returns (DistributeCompleteResponse);
 }

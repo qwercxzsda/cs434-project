@@ -4,6 +4,23 @@ import "record.proto";
 package com.blue.proto;
 
 /*
+ * 5. master -> worker
+ * Master acknowledges worker to start sorting
+ */
+
+message SortStartRequest {
+  bool success = 1;
+}
+
+message SortStartResponse {
+  bool success = 1;
+}
+
+service SortStartService {
+  rpc SortStart(SortStartRequest) returns (SortStartResponse);
+}
+
+/*
  * 6. worker -> master
  * Worker acknowledges master that it finished sorting
  */
