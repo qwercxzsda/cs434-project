@@ -108,8 +108,12 @@ object Worker extends App {
   // Send DistributeComplete request to master
   // This notifies master that this worker has finished distributing all records
   private def sendDistributeComplete: Future[Unit] = async {
-    // TODO: implement
     await(distributeComplete)
+    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
+    val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
+    val request: DistributeCompleteRequest = DistributeCompleteRequest(ip = NetworkConfig.ip)
+    val response: Future[DistributeCompleteResponse] = stub.distributeComplete(request)
+    // No need to wait for response
     ()
   }
 
