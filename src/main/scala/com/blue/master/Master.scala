@@ -120,7 +120,14 @@ object Master extends App {
   }
 
   private def sendSortStart: Future[Unit] = async {
-    // TODO: implement
+    val workerIps = await(distributeCompleteWorkerIps)
+    val channels = workerIps map { ip =>
+      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
+    }
+    val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
+    val request: SortStartRequest = SortStartRequest()
+    val responses: List[Future[SortStartResponse]] = stubs map (_.sortStart(request))
+    // no need to wait for responses
     ()
   }
 }
