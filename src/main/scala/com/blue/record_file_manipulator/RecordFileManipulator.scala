@@ -20,7 +20,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   Files.deleteIfExists(Paths.get(inputSortedPath))
   Files.deleteIfExists(Paths.get(distributedPath))
 
-  println(s"RecordFileManipulator instantiated with inputPath: $inputPath, outputPath: $outputPath, inputSortedPath: $inputSortedPath, distributedPath: $distributedPath")
+  println(s"RecordFileManipulator instantiated with \ninputPath: $inputPath, \noutputPath: $outputPath, \ninputSortedPath: $inputSortedPath, \ndistributedPath: $distributedPath")
 
   def saveDistributedRecords(records: Seq[Record]): Unit = {
     val file: File = new File(distributedPath)
@@ -46,6 +46,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     } finally {
       inputSortedSource.close()
     }
+    println(s"RecordFileManipulator.getSamples: samples picked")
     samples
   }
 
@@ -53,6 +54,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val inputSortedSource: BufferedSource = scala.io.Source.fromFile(inputSortedPath)
     val inputSortedIterator: Iterator[String] = inputSortedSource.getLines()
     val recordsToDistribute: Iterator[Record] = inputSortedIterator map stringToRecord
+    println(s"RecordFileManipulator.getRecordsToDistribute: records to distribute obtained")
     (recordsToDistribute, inputSortedSource)
   }
 
@@ -61,6 +63,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   }
 
   def sortDistributedRecords(): Unit = {
+    println(s"RecordFileManipulator.sortDistributedRecords: sorting distributed records")
     sort(distributedPath, outputPath)
   }
 
@@ -70,6 +73,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val outputIterator: Iterator[String] = outputSource.getLines()
     try {
       val recordsString: List[String] = outputIterator.toList
+      println(s"RecordFileManipulator.getSortResult: sort result obtained")
       (stringToRecord(recordsString.head), stringToRecord(recordsString.last))
     } finally {
       outputSource.close()
@@ -86,21 +90,17 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     } finally {
       inputSource.close()
     }
-    println(s"RecordFileManipulator.sort: input read")
 
     val sortedRecords: List[String] = records.sorted
-    println(s"RecordFileManipulator.sort: records sorted, sortedRecords.length: ${sortedRecords.length}")
 
     val file: File = new File(outputPath)
     if (!file.exists) file.createNewFile
     val outputWriter: FileWriter = new FileWriter(file)
-    println(s"RecordFileManipulator.sort: output writer created")
     try {
       sortedRecords foreach (record => outputWriter.write(record + "\n"))
     } finally {
       outputWriter.close()
     }
-    println(s"RecordFileManipulator.sort: output written")
   }
 
   private def stringToRecord(string: String): Record = {
