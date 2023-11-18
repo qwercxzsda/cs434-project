@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package com.blue.proto;
+
+/*
+ * 5. master -> worker
+ * Master acknowledges worker to start sorting
+ */
+
+message SortStartRequest {
+  bool success = 1;
+}
+
+message SortStartResponse {
+  bool success = 1;
+}
+
+service SortStartService {
+  rpc SortStart(SortStartRequest) returns (SortStartResponse);
+}

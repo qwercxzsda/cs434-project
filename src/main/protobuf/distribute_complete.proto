@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package com.blue.proto;
+
+/*
+ * 4. worker -> master
+ * Worker acknowledges master that it finished distributing all the data.
+ */
+
+message DistributeCompleteRequest {
+  string ip = 1;
+}
+
+message DistributeCompleteResponse {
+  bool success = 1;
+}
+
+service DistributeCompleteService {
+  rpc DistributeComplete(DistributeCompleteRequest) returns (DistributeCompleteResponse);
+}
