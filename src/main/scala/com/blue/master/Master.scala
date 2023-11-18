@@ -20,6 +20,8 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
 import scala.util.{Failure, Success}
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object Master extends App {
   private val workerNum: Int = args(0).toInt
@@ -45,7 +47,12 @@ object Master extends App {
     addService(MasterGrpc.bindService(new MasterImpl, ExecutionContext.global)).
     build.start
 
-  // TODO: print result and wait the main thread until sortCompleteAllComplete.future is completed
+  // TODO: verify sort results, use logging
+  /* All the code above executes asynchronously.
+   * As as result, this part of code is reached immediately.
+   */
+  println(s"Master server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
+  private val result: Unit = Await.result(sortCompleteAllComplete.future, Duration.Inf)
 
 
   private class MasterImpl extends MasterGrpc.Master {
