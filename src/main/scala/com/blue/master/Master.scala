@@ -1,4 +1,4 @@
-package com.blue
+package com.blue.master
 
 import com.blue.proto.record._
 import com.blue.proto.register._
