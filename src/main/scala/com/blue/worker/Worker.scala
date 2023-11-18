@@ -110,30 +110,29 @@ object Worker extends App {
     val workerIps: List[String] = ranges.keys.toList
     val rangeBegins: List[String] = ranges.values.toList
     val (recordsToDistribute: Iterator[Record], toClose: BufferedSource) = recordFileManipulator.getRecordsToDistribute
-    val distributeResponses = try {
+    try {
       val channels = workerIps map { ip =>
         ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
       }
-      val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
-      val rangeBegin_stubs: List[(String, WorkerGrpc.WorkerStub)] = rangeBegins zip stubs
+      val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
+      val rangeBegin_blockingStubs: List[(String, WorkerGrpc.WorkerBlockingStub)] = rangeBegins zip blockingStubs
 
-      def distributeOneRecord(record: Record): Future[DistributeResponse] = {
+      def distributeOneRecord(record: Record): Unit = {
         val key = record.key
         // send to the last worker whose rangeBegin is greater than or equal to the key
-        val stub = (rangeBegin_stubs findLast (rangeBegin_stub => key >= rangeBegin_stub._1)).get._2
+        val blockingStub = (rangeBegin_blockingStubs findLast (rangeBegin_stub => key >= rangeBegin_stub._1)).get._2
         // TODO: send blocks of records for efficiency
         val request: DistributeRequest = DistributeRequest(records = Seq(record))
-        val response: Future[DistributeResponse] = stub.distribute(request)
-        response
+        val response: DistributeResponse = blockingStub.distribute(request)
       }
 
-      recordsToDistribute map distributeOneRecord
+      recordsToDistribute foreach distributeOneRecord
     } finally {
       recordFileManipulator.closeRecordsToDistribute(toClose)
     }
     // Must wait for response
     // If not, the worker will start sorting before all records are distributed
-    await(Future.sequence(distributeResponses))
+    // Thus, we use blockingStub to send DistributeRequest
     println(s"Worker sent DistributeRequest to all workers")
     ()
   }
