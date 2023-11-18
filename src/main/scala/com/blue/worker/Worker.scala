@@ -30,7 +30,6 @@ object Worker extends App {
   // TODO: should take multiple input directories
   private val inputDirectories: List[String] = List(args(2))
   private val outputDirectory: String = args(4)
-
   private val samples: List[Record] = getSamples
 
   sendRegister
@@ -40,6 +39,9 @@ object Worker extends App {
   private val distributeComplete: Future[Unit] = sendDistribute
 
   sendDistributeComplete
+
+  private val sortStartComplete: Promise[Unit] = Promise()
+
 
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
@@ -51,6 +53,11 @@ object Worker extends App {
       val records = request.records
       // TODO: save records to file
       Future(DistributeResponse(success = true))
+    }
+
+    override def sortStart(request: SortStartRequest): Future[SortStartResponse] = {
+      sortStartComplete success ()
+      Future(SortStartResponse(success = true))
     }
   }
 
