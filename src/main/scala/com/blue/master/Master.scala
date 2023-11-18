@@ -121,7 +121,7 @@ object Master extends App {
     await(distributeCompleteAllComplete.future)
     val workerIps = distributeCompleteRequests.asScala.toList.sorted
     Check.workerIps(workerNum, workerIps)
-    assert(workerIps == await(this.workerIps), s"getDistributeCompleteWorkerIps is $workerIps, not ${await(this.workerIps)}")
+    assert(workerIps == await(this.workerIps))
     workerIps
   }
 

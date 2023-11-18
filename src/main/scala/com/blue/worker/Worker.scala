@@ -94,7 +94,7 @@ object Worker extends App {
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
-    assert(await(response).ip == masterIp, s"sendRegisterResponse ip is ${await(response).ip}, not $masterIp")
+    assert(await(response).ip == masterIp)
     ()
   }
 
