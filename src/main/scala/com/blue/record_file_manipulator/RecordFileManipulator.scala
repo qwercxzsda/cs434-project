@@ -24,7 +24,11 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   Files.deleteIfExists(Paths.get(inputSortedPath))
   Files.deleteIfExists(Paths.get(distributedPath))
 
-  logger.info(s"RecordFileManipulator instantiated with \ninputPath: $inputPath, \noutputPath: $outputPath, \ninputSortedPath: $inputSortedPath, \ndistributedPath: $distributedPath")
+  logger.info(s"RecordFileManipulator instantiated")
+  logger.info(s"inputPath: $inputPath")
+  logger.info(s"outputPath: $outputPath")
+  logger.info(s"inputSortedPath: $inputSortedPath")
+  logger.info(s"distributedPath: $distributedPath")
 
   def saveDistributedRecords(records: Seq[Record]): Unit = {
     val file: File = new File(distributedPath)

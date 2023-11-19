@@ -57,12 +57,12 @@ object Worker extends App {
     addService(WorkerGrpc.bindService(new WorkerImpl, ExecutionContext.global)).
     build.start
 
-  // TODO: verify sort results, use logging
   /* All the code above executes asynchronously.
    * As as result, this part of code is reached immediately.
    */
   logger.info(s"Server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
-  private val result: Unit = Await.result(workerComplete, Duration.Inf)
+  Await.result(workerComplete, Duration.Inf)
+  logger.info(s"Finished sorting, workerComplete")
 
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
@@ -104,7 +104,7 @@ object Worker extends App {
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
     Check.weakAssertEq(logger)(await(response).ip, masterIp, "await(response).ip is not equal to masterIp")
-    logger.info(s"Sent RegisterRequest to master(Wait for response)")
+    logger.info(s"Sent RegisterRequest to master at $masterIp:${NetworkConfig.port}(Wait for response)")
     ()
   }
 
@@ -173,6 +173,8 @@ object Worker extends App {
     val request: SortCompleteRequest =
       SortCompleteRequest(ip = NetworkConfig.ip, begin = Option(sortResult._1), end = Option(sortResult._2))
     val response: Future[SortCompleteResponse] = stub.sortComplete(request)
+
+    logger.info(s"Sort complete, minKey: ${sortResult._1.key}, maxKey: ${sortResult._2.key}")
     // Must wait for response
     await(response)
     logger.info(s"Sent SortCompleteRequest to master(Wait for response)")
