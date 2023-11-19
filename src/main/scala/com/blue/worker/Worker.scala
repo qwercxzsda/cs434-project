@@ -116,6 +116,7 @@ object Worker extends App {
     val rangeBegins: List[String] = ranges.values.toList
     val (recordsToDistribute: Iterator[Record], toClose: BufferedSource) = recordFileManipulator.getRecordsToDistribute
     try {
+      logger.info(s"Sending DistributeRequest for all samples to designated workers(Distribution started)")
       val channels = workerIps map { ip =>
         ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
       }
