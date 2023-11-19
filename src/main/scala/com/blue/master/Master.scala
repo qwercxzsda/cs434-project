@@ -63,7 +63,7 @@ object Master extends App {
       logger.info(s"Received register request from ${request.ip}")
       registerRequests add request
       if (registerRequests.size >= workerNum) {
-        Check.weakAssert(logger)(registerRequests.size == workerNum, s"registerRequests.size is ${registerRequests.size}, not $workerNum")
+        Check.weakAssertEq(logger)(registerRequests.size, workerNum, "registerRequests.size is not equal to workerNum")
         registerAllComplete trySuccess ()
       }
       Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
@@ -73,7 +73,7 @@ object Master extends App {
       logger.info(s"Received distribute complete request from ${request.ip}")
       distributeCompleteRequests add request.ip
       if (distributeCompleteRequests.size >= workerNum) {
-        Check.weakAssert(logger)(distributeCompleteRequests.size == workerNum, s"distributeCompleteRequests.size is ${distributeCompleteRequests.size}, not $workerNum")
+        Check.weakAssertEq(logger)(distributeCompleteRequests.size, workerNum, s"distributeCompleteRequests.size is not equal to workerNum")
         distributeCompleteAllComplete trySuccess ()
       }
       Future(DistributeCompleteResponse(success = true))
@@ -83,7 +83,7 @@ object Master extends App {
       logger.info(s"Received sort complete request from ${request.ip}")
       sortCompleteRequests add request
       if (sortCompleteRequests.size >= workerNum) {
-        Check.weakAssert(logger)(sortCompleteRequests.size == workerNum, s"sortCompleteRequests.size is ${sortCompleteRequests.size}, not $workerNum")
+        Check.weakAssertEq(logger)(sortCompleteRequests.size, workerNum, s"sortCompleteRequests.size is not equal to workerNum")
         sortCompleteAllComplete trySuccess ()
       }
       Future(SortCompleteResponse(success = true))
