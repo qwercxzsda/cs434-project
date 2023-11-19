@@ -68,7 +68,7 @@ object Master extends App {
         Check.weakAssertEq(logger)(registerRequests.size, workerNum, "registerRequests.size is not equal to workerNum")
         registerAllComplete trySuccess ()
       }
-      Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
+      Future(RegisterResponse(ip = NetworkConfig.ip))
     }
 
     override def distributeComplete(request: DistributeCompleteRequest): Future[DistributeCompleteResponse] = {
@@ -78,7 +78,7 @@ object Master extends App {
         Check.weakAssertEq(logger)(distributeCompleteRequests.size, workerNum, s"distributeCompleteRequests.size is not equal to workerNum")
         distributeCompleteAllComplete trySuccess ()
       }
-      Future(DistributeCompleteResponse(success = true))
+      Future(DistributeCompleteResponse())
     }
 
     override def sortComplete(request: SortCompleteRequest): Future[SortCompleteResponse] = {
@@ -88,7 +88,7 @@ object Master extends App {
         Check.weakAssertEq(logger)(sortCompleteRequests.size, workerNum, s"sortCompleteRequests.size is not equal to workerNum")
         sortCompleteAllComplete trySuccess ()
       }
-      Future(SortCompleteResponse(success = true))
+      Future(SortCompleteResponse())
     }
   }
 
@@ -143,7 +143,7 @@ object Master extends App {
       ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
     }
     val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
-    val request: SortStartRequest = SortStartRequest(success = true)
+    val request: SortStartRequest = SortStartRequest()
     val responses: List[Future[SortStartResponse]] = stubs map (_.sortStart(request))
     // no need to wait for responses
     logger.info(s"Sent sort start request to all workers(Didn't wait for responses)")

@@ -68,20 +68,20 @@ object Worker extends App {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
       logger.info(s"Received DistributeStartRequest with ranges: ${request.ranges}")
       distributeStartComplete success request.ranges
-      Future(DistributeStartResponse(success = true))
+      Future(DistributeStartResponse())
     }
 
     override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
       val records = request.records
       logger.info(s"Received DistributeRequest with ${records.size} records")
       recordFileManipulator saveDistributedRecords records
-      Future(DistributeResponse(success = true))
+      Future(DistributeResponse())
     }
 
     override def sortStart(request: SortStartRequest): Future[SortStartResponse] = {
       logger.info(s"Received SortStartRequest")
       sortStartComplete success ()
-      Future(SortStartResponse(success = true))
+      Future(SortStartResponse())
     }
   }
 

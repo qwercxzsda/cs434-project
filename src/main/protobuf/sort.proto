@@ -9,11 +9,9 @@ package com.blue.proto;
  */
 
 message SortStartRequest {
-  bool success = 1;
 }
 
 message SortStartResponse {
-  bool success = 1;
 }
 
 /*
@@ -28,5 +26,4 @@ message SortCompleteRequest {
 }
 
 message SortCompleteResponse {
-  bool success = 1;
 }
