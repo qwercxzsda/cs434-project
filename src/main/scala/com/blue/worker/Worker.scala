@@ -73,7 +73,7 @@ object Worker extends App {
 
     override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
       val records = request.records
-      logger.info(s"Received DistributeRequest with ${records.size} records")
+      logger.info(s"Received DistributeRequest from ${request.ip} with ${records.size} records")
       recordFileManipulator saveDistributedRecords records
       Future(DistributeResponse())
     }
@@ -127,7 +127,7 @@ object Worker extends App {
         // send to the last worker whose rangeBegin is greater than or equal to the key
         val blockingStub = (rangeBegin_blockingStubs findLast (rangeBegin_stub => key >= rangeBegin_stub._1)).get._2
         // TODO: send blocks of records for efficiency
-        val request: DistributeRequest = DistributeRequest(records = Seq(record))
+        val request: DistributeRequest = DistributeRequest(ip = NetworkConfig.ip, records = Seq(record))
         val response: DistributeResponse = blockingStub.distribute(request)
       }
 

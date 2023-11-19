@@ -21,7 +21,8 @@ message DistributeStartResponse {
  */
 
 message DistributeRequest {
-  repeated Record records = 1;
+  string ip = 1;
+  repeated Record records = 2;
 }
 
 message DistributeResponse {
