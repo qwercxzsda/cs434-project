@@ -123,12 +123,14 @@ object Worker extends App {
         ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
       }
       val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
-      val rangeBegin_blockingStubs: List[(String, WorkerGrpc.WorkerBlockingStub)] = rangeBegins zip blockingStubs
 
       def distributeOneRecord(record: Record): Unit = {
         val key = record.key
         // send to the last worker whose rangeBegin is greater than or equal to the key
-        val blockingStub = (rangeBegin_blockingStubs findLast (rangeBegin_stub => key >= rangeBegin_stub._1)).get._2
+        val blockingStubIdx: Int = rangeBegins lastIndexWhere (rangeBegin => key >= rangeBegin)
+        // As rangeBegins are calculated from samples, there might be a record whose key is smaller than all rangeBegins
+        // In this case, send the record to the first worker
+        val blockingStub: WorkerGrpc.WorkerBlockingStub = blockingStubs(if (blockingStubIdx == -1) 0 else blockingStubIdx)
         // TODO: send blocks of records for efficiency
         val request: DistributeRequest = DistributeRequest(ip = NetworkConfig.ip, records = Seq(record))
         val response: DistributeResponse = blockingStub.distribute(request)
