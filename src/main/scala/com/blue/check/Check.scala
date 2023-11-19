@@ -25,7 +25,8 @@ object Check {
   }
 
   def checkMasterResult(logger: Logger)(result: List[SortCompleteRequest]): Unit = {
-    (result foldLeft "")((acc: String, workerResult: SortCompleteRequest) => {
+    val sortedResult: List[SortCompleteRequest] = result sortBy (_.ip)
+    (sortedResult foldLeft "")((acc: String, workerResult: SortCompleteRequest) => {
       val minKey: String = workerResult.begin.get.key
       val maxKey: String = workerResult.end.get.key
       logger.info(s"worker ${workerResult.ip} minKey: $minKey, maxKey: $maxKey")
