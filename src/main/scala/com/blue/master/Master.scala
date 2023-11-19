@@ -59,27 +59,30 @@ object Master extends App {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
       registerRequests add request
       if (registerRequests.size >= workerNum) {
-        assert(registerRequests.size == workerNum)
+        assert(registerRequests.size == workerNum, s"registerRequests.size is ${registerRequests.size}, not $workerNum")
         registerAllComplete trySuccess ()
       }
+      println(s"Master received register request from ${request.ip}")
       Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
     }
 
     override def distributeComplete(request: DistributeCompleteRequest): Future[DistributeCompleteResponse] = {
       distributeCompleteRequests add request.ip
       if (distributeCompleteRequests.size >= workerNum) {
-        assert(distributeCompleteRequests.size == workerNum)
+        assert(distributeCompleteRequests.size == workerNum, s"distributeCompleteRequests.size is ${distributeCompleteRequests.size}, not $workerNum")
         distributeCompleteAllComplete trySuccess ()
       }
+      println(s"Master received distribute complete request from ${request.ip}")
       Future(DistributeCompleteResponse(success = true))
     }
 
     override def sortComplete(request: SortCompleteRequest): Future[SortCompleteResponse] = {
       sortCompleteRequests add request
       if (sortCompleteRequests.size >= workerNum) {
-        assert(sortCompleteRequests.size == workerNum)
+        assert(sortCompleteRequests.size == workerNum, s"sortCompleteRequests.size is ${sortCompleteRequests.size}, not $workerNum")
         sortCompleteAllComplete trySuccess ()
       }
+      println(s"Master received sort complete request from ${request.ip}")
       Future(SortCompleteResponse(success = true))
     }
   }
@@ -88,6 +91,7 @@ object Master extends App {
     await(registerAllComplete.future)
     val workerIps = registerRequests.asScala.toList.map(_.ip).sorted
     Check.workerIps(workerNum, workerIps)
+    println(s"Master received all register requests, worker ips: $workerIps")
     workerIps
   }
 
@@ -100,6 +104,7 @@ object Master extends App {
     val portion: Int = (keys.length.toDouble / workerNum).ceil.toInt
     val ranges = keys.sorted.grouped(portion).map(_.head).toList
     Check.ranges(workerNum, ranges)
+    println(s"Master received all register requests, ranges: $ranges")
     ranges
   }
 
@@ -114,6 +119,7 @@ object Master extends App {
     val request: DistributeStartRequest = DistributeStartRequest(ranges = workerIpRangeMap)
     val responses: List[Future[DistributeStartResponse]] = stubs map (_.distributeStart(request))
     // No need to wait for responses
+    println(s"Master sent distribute start request to all workers")
     ()
   }
 
@@ -121,7 +127,8 @@ object Master extends App {
     await(distributeCompleteAllComplete.future)
     val workerIps = distributeCompleteRequests.asScala.toList.sorted
     Check.workerIps(workerNum, workerIps)
-    assert(workerIps == await(this.workerIps), "getDistributeCompleteWorkerIps is not equal to workerIps")
+    assert(workerIps == await(this.workerIps))
+    println(s"Master received all distribute complete requests, worker ips: $workerIps")
     workerIps
   }
 
@@ -131,9 +138,10 @@ object Master extends App {
       ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
     }
     val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
-    val request: SortStartRequest = SortStartRequest()
+    val request: SortStartRequest = SortStartRequest(success = true)
     val responses: List[Future[SortStartResponse]] = stubs map (_.sortStart(request))
     // no need to wait for responses
+    println(s"Master sent sort start request to all workers")
     ()
   }
 }
