@@ -63,7 +63,7 @@ object Master extends App {
       logger.info(s"Received register request from ${request.ip}")
       registerRequests add request
       if (registerRequests.size >= workerNum) {
-        assert(registerRequests.size == workerNum, s"registerRequests.size is ${registerRequests.size}, not $workerNum")
+        Check.weakAssert(logger)(registerRequests.size == workerNum, s"registerRequests.size is ${registerRequests.size}, not $workerNum")
         registerAllComplete trySuccess ()
       }
       Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
@@ -73,7 +73,7 @@ object Master extends App {
       logger.info(s"Received distribute complete request from ${request.ip}")
       distributeCompleteRequests add request.ip
       if (distributeCompleteRequests.size >= workerNum) {
-        assert(distributeCompleteRequests.size == workerNum, s"distributeCompleteRequests.size is ${distributeCompleteRequests.size}, not $workerNum")
+        Check.weakAssert(logger)(distributeCompleteRequests.size == workerNum, s"distributeCompleteRequests.size is ${distributeCompleteRequests.size}, not $workerNum")
         distributeCompleteAllComplete trySuccess ()
       }
       Future(DistributeCompleteResponse(success = true))
@@ -83,7 +83,7 @@ object Master extends App {
       logger.info(s"Received sort complete request from ${request.ip}")
       sortCompleteRequests add request
       if (sortCompleteRequests.size >= workerNum) {
-        assert(sortCompleteRequests.size == workerNum, s"sortCompleteRequests.size is ${sortCompleteRequests.size}, not $workerNum")
+        Check.weakAssert(logger)(sortCompleteRequests.size == workerNum, s"sortCompleteRequests.size is ${sortCompleteRequests.size}, not $workerNum")
         sortCompleteAllComplete trySuccess ()
       }
       Future(SortCompleteResponse(success = true))
@@ -93,7 +93,7 @@ object Master extends App {
   private def getWorkerIps: Future[List[String]] = async {
     await(registerAllComplete.future)
     val workerIps = registerRequests.asScala.toList.map(_.ip).sorted
-    Check.workerIps(workerNum, workerIps)
+    Check.workerIps(logger)(workerNum, workerIps)
     logger.info(s"Received all register requests, worker ips: $workerIps")
     workerIps
   }
@@ -106,7 +106,7 @@ object Master extends App {
     } yield sample.key
     val portion: Int = (keys.length.toDouble / workerNum).ceil.toInt
     val ranges = keys.sorted.grouped(portion).map(_.head).toList
-    Check.ranges(workerNum, ranges)
+    Check.ranges(logger)(workerNum, ranges)
     logger.info(s"Received all register requests, ranges: $ranges")
     ranges
   }
@@ -129,8 +129,8 @@ object Master extends App {
   private def getDistributeCompleteWorkerIps: Future[List[String]] = async {
     await(distributeCompleteAllComplete.future)
     val workerIps = distributeCompleteRequests.asScala.toList.sorted
-    Check.workerIps(workerNum, workerIps)
-    assert(workerIps == await(this.workerIps))
+    Check.workerIps(logger)(workerNum, workerIps)
+    Check.weakAssertEq(logger)(workerIps, await(this.workerIps), "getDistributeCompleteWorkerIps is not equal to workerIps")
     logger.info(s"Received all distribute complete requests, worker ips: $workerIps")
     workerIps
   }
