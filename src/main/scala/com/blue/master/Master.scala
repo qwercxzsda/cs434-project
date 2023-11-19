@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
 import scala.util.{Failure, Success}
@@ -54,7 +54,9 @@ object Master extends App {
    * As as result, this part of code is reached immediately.
    */
   logger.info(s"Server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
-  Await.result(sortCompleteAllComplete.future, Duration.Inf)
+  blocking {
+    Await.result(sortCompleteAllComplete.future, Duration.Inf)
+  }
   logger.info(s"All the workers finished sorting, MasterComplete")
   private val result: List[SortCompleteRequest] = sortCompleteRequests.asScala.toList
   Check.weakAssertEq(logger)(result.length, workerNum, "result.length is not equal to workerNum")

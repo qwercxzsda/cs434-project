@@ -20,7 +20,7 @@ import scala.jdk.CollectionConverters._
 import scala.io.BufferedSource
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
 import scala.util.{Failure, Success}
@@ -61,7 +61,9 @@ object Worker extends App {
    * As as result, this part of code is reached immediately.
    */
   logger.info(s"Server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
-  Await.result(workerComplete, Duration.Inf)
+  blocking {
+    Await.result(workerComplete, Duration.Inf)
+  }
   logger.info(s"Finished sorting, workerComplete")
 
   private class WorkerImpl extends WorkerGrpc.Worker {
@@ -132,7 +134,9 @@ object Worker extends App {
         val response: DistributeResponse = blockingStub.distribute(request)
       }
 
-      recordsToDistribute foreach distributeOneRecord
+      blocking {
+        recordsToDistribute foreach distributeOneRecord
+      }
     } finally {
       recordFileManipulator.closeRecordsToDistribute(toClose)
     }
