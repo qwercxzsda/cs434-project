@@ -30,6 +30,7 @@ object Check {
       val minKey: String = workerResult.begin.get.key
       val maxKey: String = workerResult.end.get.key
       logger.info(s"worker ${workerResult.ip} minKey: $minKey, maxKey: $maxKey")
+      weakAssert(logger)(minKey <= maxKey, s"minKey is larger than maxKey: $minKey, $maxKey")
       weakAssert(logger)(acc <= minKey, s"keys aren't increasing: $acc, $minKey")
       maxKey
     }
