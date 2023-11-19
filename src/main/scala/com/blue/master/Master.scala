@@ -50,13 +50,15 @@ object Master extends App {
     addService(MasterGrpc.bindService(new MasterImpl, ExecutionContext.global)).
     build.start
 
-  // TODO: verify sort results, use logging
   /* All the code above executes asynchronously.
    * As as result, this part of code is reached immediately.
    */
   logger.info(s"Server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
-  private val result: Unit = Await.result(sortCompleteAllComplete.future, Duration.Inf)
-
+  Await.result(sortCompleteAllComplete.future, Duration.Inf)
+  logger.info(s"All the workers finished sorting, MasterComplete")
+  private val result: List[SortCompleteRequest] = sortCompleteRequests.asScala.toList
+  Check.weakAssertEq(logger)(result.length, workerNum, "result.length is not equal to workerNum")
+  Check.checkMasterResult(logger)(result)
 
   private class MasterImpl extends MasterGrpc.Master {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {

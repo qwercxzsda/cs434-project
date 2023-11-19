@@ -1,5 +1,6 @@
 package com.blue.check
 
+import com.blue.proto.sort.SortCompleteRequest
 import com.typesafe.scalalogging.Logger
 
 object Check {
@@ -21,6 +22,17 @@ object Check {
       weakAssert(logger)(acc < range, s"ranges aren't strongly increasing: $acc, $range")
       range
     })
+  }
+
+  def checkMasterResult(logger: Logger)(result: List[SortCompleteRequest]): Unit = {
+    (result foldLeft "")((acc: String, workerResult: SortCompleteRequest) => {
+      val minKey: String = workerResult.begin.get.key
+      val maxKey: String = workerResult.end.get.key
+      logger.info(s"worker ${workerResult.ip} minKey: $minKey, maxKey: $maxKey")
+      weakAssert(logger)(acc <= minKey, s"keys aren't increasing: $acc, $minKey")
+      maxKey
+    }
+    )
   }
 
   // Similar to assert, but only logs error and does not throw exception
