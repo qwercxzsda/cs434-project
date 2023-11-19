@@ -2,11 +2,15 @@ package com.blue.record_file_manipulator
 
 import com.blue.proto.record._
 
+import com.blue.check.Check
+
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Paths}
 import scala.io._
+import com.typesafe.scalalogging.Logger
 
 class RecordFileManipulator(inputDirectories: List[String], outputDirectory: String) {
+  private val logger: Logger = Logger("RecordFileManipulator")
   private val sampleNum: Int = 10
   private val keyLength: Int = 10
   private val valueLength: Int = 90
@@ -34,23 +38,22 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   }
 
   def getSamples: List[Record] = {
-    // Must input sort when taking samples!!
-    sort(inputPath, inputSortedPath)
-    println(s"RecordFileManipulator.getSamples: input sorted")
+    // sampling is done on unsorted input file
+    logger.info(s"Sampling $sampleNum records from $inputPath")
 
-    val inputSortedSource: BufferedSource = scala.io.Source.fromFile(inputSortedPath)
-    val inputSortedIterator: Iterator[String] = inputSortedSource.getLines()
+    val inputSource: BufferedSource = scala.io.Source.fromFile(inputPath)
+    val inputIterator: Iterator[String] = inputSource.getLines()
     val samples: List[Record] = try {
-      val samplesString: List[String] = inputSortedIterator.take(sampleNum).toList
+      val samplesString: List[String] = inputIterator.take(sampleNum).toList
       samplesString map stringToRecord
     } finally {
-      inputSortedSource.close()
+      inputSource.close()
     }
-    println(s"RecordFileManipulator.getSamples: samples picked")
     samples
   }
 
   def getRecordsToDistribute: (Iterator[Record], BufferedSource) = {
+    sort(inputPath, inputSortedPath)
     val inputSortedSource: BufferedSource = scala.io.Source.fromFile(inputSortedPath)
     val inputSortedIterator: Iterator[String] = inputSortedSource.getLines()
     val recordsToDistribute: Iterator[Record] = inputSortedIterator map stringToRecord
