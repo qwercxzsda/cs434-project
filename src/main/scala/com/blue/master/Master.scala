@@ -16,7 +16,9 @@ import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import com.typesafe.scalalogging.Logger
+
+import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
 import scala.util.{Failure, Success}
@@ -24,6 +26,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object Master extends App {
+  private val logger: Logger = Logger("Master")
   private val workerNum: Int = args(0).toInt
 
   private val registerRequests: ConcurrentLinkedQueue[RegisterRequest] = new ConcurrentLinkedQueue[RegisterRequest]()
@@ -47,51 +50,55 @@ object Master extends App {
     addService(MasterGrpc.bindService(new MasterImpl, ExecutionContext.global)).
     build.start
 
-  // TODO: verify sort results, use logging
   /* All the code above executes asynchronously.
    * As as result, this part of code is reached immediately.
    */
-  println(s"Master server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
-  private val result: Unit = Await.result(sortCompleteAllComplete.future, Duration.Inf)
-
+  logger.info(s"Server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
+  blocking {
+    Await.result(sortCompleteAllComplete.future, Duration.Inf)
+  }
+  logger.info(s"All the workers finished sorting, MasterComplete")
+  private val result: List[SortCompleteRequest] = sortCompleteRequests.asScala.toList
+  Check.weakAssertEq(logger)(result.length, workerNum, "result.length is not equal to workerNum")
+  Check.checkMasterResult(logger)(result)
 
   private class MasterImpl extends MasterGrpc.Master {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
+      logger.info(s"Received register request from ${request.ip}")
       registerRequests add request
       if (registerRequests.size >= workerNum) {
-        assert(registerRequests.size == workerNum, s"registerRequests.size is ${registerRequests.size}, not $workerNum")
+        Check.weakAssertEq(logger)(registerRequests.size, workerNum, "registerRequests.size is not equal to workerNum")
         registerAllComplete trySuccess ()
       }
-      println(s"Master received register request from ${request.ip}")
-      Future(RegisterResponse(ip = NetworkConfig.ip, success = true))
+      Future(RegisterResponse(ip = NetworkConfig.ip))
     }
 
     override def distributeComplete(request: DistributeCompleteRequest): Future[DistributeCompleteResponse] = {
+      logger.info(s"Received distribute complete request from ${request.ip}")
       distributeCompleteRequests add request.ip
       if (distributeCompleteRequests.size >= workerNum) {
-        assert(distributeCompleteRequests.size == workerNum, s"distributeCompleteRequests.size is ${distributeCompleteRequests.size}, not $workerNum")
+        Check.weakAssertEq(logger)(distributeCompleteRequests.size, workerNum, s"distributeCompleteRequests.size is not equal to workerNum")
         distributeCompleteAllComplete trySuccess ()
       }
-      println(s"Master received distribute complete request from ${request.ip}")
-      Future(DistributeCompleteResponse(success = true))
+      Future(DistributeCompleteResponse())
     }
 
     override def sortComplete(request: SortCompleteRequest): Future[SortCompleteResponse] = {
+      logger.info(s"Received sort complete request from ${request.ip}")
       sortCompleteRequests add request
       if (sortCompleteRequests.size >= workerNum) {
-        assert(sortCompleteRequests.size == workerNum, s"sortCompleteRequests.size is ${sortCompleteRequests.size}, not $workerNum")
+        Check.weakAssertEq(logger)(sortCompleteRequests.size, workerNum, s"sortCompleteRequests.size is not equal to workerNum")
         sortCompleteAllComplete trySuccess ()
       }
-      println(s"Master received sort complete request from ${request.ip}")
-      Future(SortCompleteResponse(success = true))
+      Future(SortCompleteResponse())
     }
   }
 
   private def getWorkerIps: Future[List[String]] = async {
     await(registerAllComplete.future)
     val workerIps = registerRequests.asScala.toList.map(_.ip).sorted
-    Check.workerIps(workerNum, workerIps)
-    println(s"Master received all register requests, worker ips: $workerIps")
+    Check.workerIps(logger)(workerNum, workerIps)
+    logger.info(s"Received all register requests, worker ips: $workerIps")
     workerIps
   }
 
@@ -103,8 +110,8 @@ object Master extends App {
     } yield sample.key
     val portion: Int = (keys.length.toDouble / workerNum).ceil.toInt
     val ranges = keys.sorted.grouped(portion).map(_.head).toList
-    Check.ranges(workerNum, ranges)
-    println(s"Master received all register requests, ranges: $ranges")
+    Check.ranges(logger)(workerNum, ranges)
+    logger.info(s"Received all register requests, ranges: $ranges")
     ranges
   }
 
@@ -119,16 +126,16 @@ object Master extends App {
     val request: DistributeStartRequest = DistributeStartRequest(ranges = workerIpRangeMap)
     val responses: List[Future[DistributeStartResponse]] = stubs map (_.distributeStart(request))
     // No need to wait for responses
-    println(s"Master sent distribute start request to all workers")
+    logger.info(s"Sent distribute start request to all workers(Didn't wait for responses)")
     ()
   }
 
   private def getDistributeCompleteWorkerIps: Future[List[String]] = async {
     await(distributeCompleteAllComplete.future)
     val workerIps = distributeCompleteRequests.asScala.toList.sorted
-    Check.workerIps(workerNum, workerIps)
-    assert(workerIps == await(this.workerIps))
-    println(s"Master received all distribute complete requests, worker ips: $workerIps")
+    Check.workerIps(logger)(workerNum, workerIps)
+    Check.weakAssertEq(logger)(workerIps, await(this.workerIps), "getDistributeCompleteWorkerIps is not equal to workerIps")
+    logger.info(s"Received all distribute complete requests, worker ips: $workerIps")
     workerIps
   }
 
@@ -138,10 +145,10 @@ object Master extends App {
       ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
     }
     val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
-    val request: SortStartRequest = SortStartRequest(success = true)
+    val request: SortStartRequest = SortStartRequest()
     val responses: List[Future[SortStartResponse]] = stubs map (_.sortStart(request))
     // no need to wait for responses
-    println(s"Master sent sort start request to all workers")
+    logger.info(s"Sent sort start request to all workers(Didn't wait for responses)")
     ()
   }
 }

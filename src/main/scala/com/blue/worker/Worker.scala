@@ -6,24 +6,29 @@ import com.blue.proto.distribute._
 import com.blue.proto.sort._
 import com.blue.proto.master._
 import com.blue.proto.worker._
+
 import com.blue.network.NetworkConfig
-import com.blue.record_file_manipulator.RecordFileManipulator
 import com.blue.check.Check
+import com.blue.record_file_manipulator.RecordFileManipulator
+
 import com.google.protobuf.ByteString
 import io.grpc.{Server, ServerBuilder}
-import io.grpc.{ManagedChannel, ManagedChannelBuilder, StatusRuntimeException}
+import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.io.BufferedSource
+import com.typesafe.scalalogging.Logger
+
+import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
 import scala.util.{Failure, Success}
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.io.BufferedSource
 
 object Worker extends App {
+  private val logger: Logger = Logger("Worker")
   private val masterIp: String = getMasterIp
 
   // TODO: change to proper argument parsing
@@ -52,42 +57,44 @@ object Worker extends App {
     addService(WorkerGrpc.bindService(new WorkerImpl, ExecutionContext.global)).
     build.start
 
-  // TODO: verify sort results, use logging
   /* All the code above executes asynchronously.
    * As as result, this part of code is reached immediately.
    */
-  println(s"Worker server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
-  private val result: Unit = Await.result(workerComplete, Duration.Inf)
+  logger.info(s"Server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
+  blocking {
+    Await.result(workerComplete, Duration.Inf)
+  }
+  logger.info(s"Finished sorting, workerComplete")
 
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
+      logger.info(s"Received DistributeStartRequest with ranges: ${request.ranges}")
       distributeStartComplete success request.ranges
-      println(s"Worker received DistributeStartRequest with ranges: ${request.ranges}")
-      Future(DistributeStartResponse(success = true))
+      Future(DistributeStartResponse())
     }
 
     override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
       val records = request.records
+      logger.info(s"Received DistributeRequest from ${request.ip} with ${records.size} records")
       recordFileManipulator saveDistributedRecords records
-      println(s"Worker received DistributeRequest with ${records.size} records")
-      Future(DistributeResponse(success = true))
+      Future(DistributeResponse())
     }
 
     override def sortStart(request: SortStartRequest): Future[SortStartResponse] = {
+      logger.info(s"Received SortStartRequest")
       sortStartComplete success ()
-      println(s"Worker received SortStartRequest")
-      Future(SortStartResponse(success = true))
+      Future(SortStartResponse())
     }
   }
 
   private def getMasterIp: String = {
     val port: String = args(0).substring(args(0).indexOf(":")).drop(1)
-    assert(port == NetworkConfig.port.toString, s"input master port is $port, not ${NetworkConfig.port}")
+    Check.weakAssertEq(logger)(port, NetworkConfig.port.toString, s"port(from argument) is not equal to NetworkConfig.port")
     args(0).substring(0, args(0).indexOf(":"))
   }
 
   private def getSamples: Future[List[Record]] = async {
-    println(s"Worker started sampling")
+    logger.info(s"Sampling started")
     recordFileManipulator.getSamples
   }
 
@@ -98,8 +105,8 @@ object Worker extends App {
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
-    assert(await(response).ip == masterIp)
-    println(s"Worker sent RegisterRequest to master")
+    Check.weakAssertEq(logger)(await(response).ip, masterIp, "await(response).ip is not equal to masterIp")
+    logger.info(s"Sent RegisterRequest to master at $masterIp:${NetworkConfig.port}(Wait for response)")
     ()
   }
 
@@ -111,29 +118,34 @@ object Worker extends App {
     val rangeBegins: List[String] = ranges.values.toList
     val (recordsToDistribute: Iterator[Record], toClose: BufferedSource) = recordFileManipulator.getRecordsToDistribute
     try {
+      logger.info(s"Sending DistributeRequest for all samples to designated workers(Distribution started)")
       val channels = workerIps map { ip =>
         ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
       }
       val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
-      val rangeBegin_blockingStubs: List[(String, WorkerGrpc.WorkerBlockingStub)] = rangeBegins zip blockingStubs
 
       def distributeOneRecord(record: Record): Unit = {
         val key = record.key
         // send to the last worker whose rangeBegin is greater than or equal to the key
-        val blockingStub = (rangeBegin_blockingStubs findLast (rangeBegin_stub => key >= rangeBegin_stub._1)).get._2
+        val blockingStubIdx: Int = rangeBegins lastIndexWhere (rangeBegin => key >= rangeBegin)
+        // As rangeBegins are calculated from samples, there might be a record whose key is smaller than all rangeBegins
+        // In this case, send the record to the first worker
+        val blockingStub: WorkerGrpc.WorkerBlockingStub = blockingStubs(if (blockingStubIdx == -1) 0 else blockingStubIdx)
         // TODO: send blocks of records for efficiency
-        val request: DistributeRequest = DistributeRequest(records = Seq(record))
+        val request: DistributeRequest = DistributeRequest(ip = NetworkConfig.ip, records = Seq(record))
         val response: DistributeResponse = blockingStub.distribute(request)
       }
 
-      recordsToDistribute foreach distributeOneRecord
+      blocking {
+        recordsToDistribute foreach distributeOneRecord
+      }
     } finally {
       recordFileManipulator.closeRecordsToDistribute(toClose)
     }
     // Must wait for response
     // If not, the worker will start sorting before all records are distributed
     // Thus, we use blockingStub to send DistributeRequest
-    println(s"Worker sent DistributeRequest to all workers")
+    logger.info(s"Sent DistributeRequest for all samples to designated workers(Wait for response)")
     ()
   }
 
@@ -146,7 +158,7 @@ object Worker extends App {
     val request: DistributeCompleteRequest = DistributeCompleteRequest(ip = NetworkConfig.ip)
     val response: Future[DistributeCompleteResponse] = stub.distributeComplete(request)
     // No need to wait for response
-    println(s"Worker sent DistributeCompleteRequest to master")
+    logger.info(s"Sent DistributeCompleteRequest to master(Didn't wait for response)")
     ()
   }
 
@@ -154,7 +166,7 @@ object Worker extends App {
   // Start the sort process after sortStartComplete.future is completed
   private def sort: Future[Unit] = async {
     await(sortStartComplete.future)
-    println(s"Worker started sorting")
+    logger.info(s"Sorting distributed records started")
     recordFileManipulator.sortDistributedRecords()
   }
 
@@ -168,9 +180,11 @@ object Worker extends App {
     val request: SortCompleteRequest =
       SortCompleteRequest(ip = NetworkConfig.ip, begin = Option(sortResult._1), end = Option(sortResult._2))
     val response: Future[SortCompleteResponse] = stub.sortComplete(request)
+
+    logger.info(s"Sort complete, minKey: ${sortResult._1.key}, maxKey: ${sortResult._2.key}")
     // Must wait for response
     await(response)
-    println(s"Worker sent SortCompleteRequest to master")
+    logger.info(s"Sent SortCompleteRequest to master(Wait for response)")
     ()
   }
 }

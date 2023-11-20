@@ -13,7 +13,6 @@ message DistributeStartRequest {
 }
 
 message DistributeStartResponse {
-  bool success = 1;
 }
 
 /*
@@ -22,11 +21,11 @@ message DistributeStartResponse {
  */
 
 message DistributeRequest {
-  repeated Record records = 1;
+  string ip = 1;
+  repeated Record records = 2;
 }
 
 message DistributeResponse {
-  bool success = 1;
 }
 
 /*
@@ -39,5 +38,4 @@ message DistributeCompleteRequest {
 }
 
 message DistributeCompleteResponse {
-  bool success = 1;
 }
