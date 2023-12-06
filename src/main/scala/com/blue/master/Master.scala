@@ -33,13 +33,11 @@ object Master extends App {
   private val registerAllComplete: Promise[Unit] = Promise()
   private val workerIps: Future[List[String]] = getWorkerIps
   private val ranges: Future[List[String]] = getRanges
-
   sendDistributeStart
 
   private val distributeCompleteRequests: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
   private val distributeCompleteAllComplete: Promise[Unit] = Promise()
   private val distributeCompleteWorkerIps: Future[List[String]] = getDistributeCompleteWorkerIps
-
   sendSortStart
 
   private val sortCompleteRequests: ConcurrentLinkedQueue[SortCompleteRequest] = new ConcurrentLinkedQueue[SortCompleteRequest]()

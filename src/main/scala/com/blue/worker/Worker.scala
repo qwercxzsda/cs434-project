@@ -36,20 +36,16 @@ object Worker extends App {
   private val inputDirectories: List[String] = List(args(2))
   private val outputDirectory: String = args(4)
   private val recordFileManipulator: RecordFileManipulator = new RecordFileManipulator(inputDirectories, outputDirectory)
-  private val samples: Future[List[Record]] = getSamples
 
+  private val samples: Future[List[Record]] = getSamples
   sendRegister
 
   private val distributeStartComplete: Promise[Map[String, String]] = Promise()
-
   private val distributeComplete: Future[Unit] = sendDistribute
-
   sendDistributeComplete
 
   private val sortStartComplete: Promise[Unit] = Promise()
-
   private val sortComplete: Future[Unit] = sort
-
   private val workerComplete: Future[Unit] = sendSortComplete
 
   private val server = ServerBuilder.
