@@ -48,6 +48,7 @@ object Master extends App {
   private val server = ServerBuilder.
     forPort(NetworkConfig.port).
     addService(MasterGrpc.bindService(new MasterImpl, ExecutionContext.global)).
+    asInstanceOf[ServerBuilder[_]].
     build.start
 
   /* All the code above executes asynchronously.
@@ -120,7 +121,8 @@ object Master extends App {
     val ranges = await(this.ranges)
     val workerIpRangeMap: Map[String, String] = (workerIps zip ranges).toMap
     val channels = workerIps map { ip =>
-      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
+      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).
+        usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
     }
     val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
     val request: DistributeStartRequest = DistributeStartRequest(ranges = workerIpRangeMap)
@@ -142,7 +144,8 @@ object Master extends App {
   private def sendSortStart: Future[Unit] = async {
     val workerIps = await(distributeCompleteWorkerIps)
     val channels = workerIps map { ip =>
-      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
+      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).
+        usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
     }
     val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
     val request: SortStartRequest = SortStartRequest()

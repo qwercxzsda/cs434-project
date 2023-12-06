@@ -55,6 +55,7 @@ object Worker extends App {
   private val server = ServerBuilder.
     forPort(NetworkConfig.port).
     addService(WorkerGrpc.bindService(new WorkerImpl, ExecutionContext.global)).
+    asInstanceOf[ServerBuilder[_]].
     build.start
 
   /* All the code above executes asynchronously.
@@ -101,7 +102,8 @@ object Worker extends App {
   // Send Register request to master
   private def sendRegister: Future[Unit] = async {
     val samples = await(this.samples)
-    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
+    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).
+      usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
     val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
@@ -120,7 +122,8 @@ object Worker extends App {
     try {
       logger.info(s"Sending DistributeRequest for all samples to designated workers(Distribution started)")
       val channels = workerIps map { ip =>
-        ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
+        ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).
+          usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
       }
       val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
 
@@ -153,7 +156,8 @@ object Worker extends App {
   // This notifies master that this worker has finished distributing all records
   private def sendDistributeComplete: Future[Unit] = async {
     await(distributeComplete)
-    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
+    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).
+      usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
     val request: DistributeCompleteRequest = DistributeCompleteRequest(ip = NetworkConfig.ip)
     val response: Future[DistributeCompleteResponse] = stub.distributeComplete(request)
@@ -175,7 +179,8 @@ object Worker extends App {
   private def sendSortComplete: Future[Unit] = async {
     await(sortComplete)
     val sortResult: (Record, Record) = recordFileManipulator.getSortResult
-    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).usePlaintext().build
+    val channel = ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).
+      usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
     val request: SortCompleteRequest =
       SortCompleteRequest(ip = NetworkConfig.ip, begin = Option(sortResult._1), end = Option(sortResult._2))
