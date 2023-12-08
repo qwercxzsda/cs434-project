@@ -19,6 +19,8 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   List(outputDirectory, inputSortedDirectory, distributedDirectory) foreach initializeDirectory
 
+  private val inputPaths: List[String] = inputDirectories flatMap getPathsFromDirectory
+
   logger.info(s"RecordFileManipulator instantiated")
   logger.info(s"inputDirectories: $inputDirectories")
   logger.info(s"outputDirectory: $outputDirectory")
@@ -28,7 +30,16 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   private def initializeDirectory(directoryName: String): Unit = {
     val directory: File = new File(directoryName)
     if (!directory.exists) directory.mkdirs
+    Check.weakAssert(logger)(directory.isDirectory, s"$directoryName is not a directory")
     directory.listFiles() foreach { file => if (!file.isDirectory) file.delete() }
+  }
+
+  private def getPathsFromDirectory(directoryName: String): List[String] = {
+    val directory: File = new File(directoryName)
+    Check.weakAssert(logger)(directory.exists, s"$directoryName does not exist")
+    Check.weakAssert(logger)(directory.isDirectory, s"$directoryName is not a directory")
+    val files: List[File] = directory.listFiles().toList
+    files map (_.getPath)
   }
 
   def saveDistributedRecords(records: Seq[Record]): Unit = {
@@ -51,17 +62,24 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     Files.write(Paths.get(file.getPath), recordsConcatenated)
   }
 
+  // sampling is done on unsorted input file
   def getSamples: List[Record] = {
-    // sampling is done on unsorted input file
-    logger.info(s"Sampling ${RecordConfig.sampleNum} records from $inputPath")
-
-    val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(inputPath)
-    val samples: List[Record] = try {
-      inputIterator.take(RecordConfig.sampleNum).toList
-    } finally {
-      inputSource.close()
+    if (inputPaths.isEmpty) {
+      logger.info(s"No Paths to sample from")
+      List()
     }
-    samples
+    else {
+      val path: String = inputPaths.head
+      logger.info(s"Sampling ${RecordConfig.sampleNum} records from $path")
+
+      val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(path)
+      val samples: List[Record] = try {
+        inputIterator.take(RecordConfig.sampleNum).toList
+      } finally {
+        inputSource.close()
+      }
+      samples
+    }
   }
 
   def getRecordsToDistribute: (Iterator[Record], BufferedSource) = {
