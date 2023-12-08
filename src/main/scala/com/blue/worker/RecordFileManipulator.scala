@@ -1,6 +1,8 @@
 package com.blue.worker
 
 import com.blue.bytestring_ordering.ByteStringOrdering._
+
+import scala.math.Ordered.orderingToOrdered
 import com.blue.check.Check
 import com.blue.proto.record._
 import com.google.protobuf.ByteString
@@ -9,8 +11,8 @@ import com.typesafe.scalalogging.Logger
 import java.util.concurrent.atomic.AtomicInteger
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Paths, StandardOpenOption}
+import scala.annotation.tailrec
 import scala.io._
-
 import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
@@ -119,14 +121,36 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     bufferedSources foreach (_.close())
   }
 
-  def mergeIterators(iter1: Iterator[Record], iter2: Iterator[Record]): Iterator[Record] = {
-    // TODO: implement
-    iter1
+  private def mergeIterators(iter1: Iterator[Record], iter2: Iterator[Record]): Iterator[Record] = {
+    val head1: Option[Record] = if (iter1.hasNext) Some(iter1.next()) else None
+    val head2: Option[Record] = if (iter2.hasNext) Some(iter2.next()) else None
+    (head1, head2) match {
+      case (None, _) => iter2
+      case (_, None) => iter1
+      case (Some(record1), Some(record2)) =>
+        if (record1.key < record2.key)
+          Iterator(record1) ++ mergeIterators(iter1, Iterator(record2) ++ iter2)
+        else
+          Iterator(record2) ++ mergeIterators(Iterator(record1) ++ iter1, iter2)
+    }
   }
 
-  def mergeSortIterators(iterators: List[Iterator[Record]]): Iterator[Record] = {
-    // TODO: implement
-    iterators.head
+  @tailrec
+  private def splitIterators(iterators: List[Iterator[Record]], left: List[Iterator[Record]],
+                             right: List[Iterator[Record]]): (List[Iterator[Record]], List[Iterator[Record]]) = {
+    iterators match {
+      case List() => (left, right)
+      case List(iter) => (iter :: left, right)
+      case iter1 :: iter2 :: tail => splitIterators(tail, iter1 :: left, iter2 :: right)
+    }
+  }
+
+  private def mergeSortIterators(iterators: List[Iterator[Record]]): Iterator[Record] = {
+    val (iter1: List[Iterator[Record]], iter2: List[Iterator[Record]]) =
+      splitIterators(iterators, List(), List())
+    val (iter1_sorted: Iterator[Record], iter2_sorted: Iterator[Record]) =
+      (mergeSortIterators(iter1), mergeSortIterators(iter2))
+    mergeIterators(iter1_sorted, iter2_sorted)
   }
 
   def getSortResult: (Record, Record) = {
