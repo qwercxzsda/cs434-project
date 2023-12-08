@@ -109,15 +109,12 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   def sortDistributedRecords(): Unit = {
     logger.info(s"Sorting distributed records")
     val distributedPaths = getPathsFromDirectory(distributedDirectory)
-    val bufferedSources_iterators: List[(BufferedSource, Iterator[Record])] =
-      distributedPaths map openFile
-    val bufferedSources: List[BufferedSource] = bufferedSources_iterators map (_._1)
-    val iterators: List[Iterator[Record]] = bufferedSources_iterators map (_._2)
-
-    val iterator_merged: Iterator[Record] = mergeSortIterators(iterators)
-    val iteratorBlocked: Iterator[List[Record]] =
-      iterator_merged.grouped(RecordConfig.writeBlockSize) map (_.toList)
-    iteratorBlocked foreach (records => saveRecordsToDirectory(outputDirectory, records))
+    val (bufferedSources: List[BufferedSource], iterators: List[Iterator[Record]]) =
+      (distributedPaths map openFile).unzip
+    val iteratorMerged: Iterator[Record] = mergeSortIterators(iterators)
+    val iteratorInBlocks: Iterator[List[Record]] =
+      iteratorMerged.grouped(RecordConfig.writeBlockSize) map (_.toList)
+    iteratorInBlocks foreach (records => saveRecordsToDirectory(outputDirectory, records))
     bufferedSources foreach (_.close())
   }
 
