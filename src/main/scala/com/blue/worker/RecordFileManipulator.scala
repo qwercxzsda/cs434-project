@@ -148,9 +148,16 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   private def mergeSortIterators(iterators: List[Iterator[Record]]): Iterator[Record] = {
     val (iter1: List[Iterator[Record]], iter2: List[Iterator[Record]]) =
       splitIterators(iterators, List(), List())
-    val (iter1_sorted: Iterator[Record], iter2_sorted: Iterator[Record]) =
-      (mergeSortIterators(iter1), mergeSortIterators(iter2))
-    mergeIterators(iter1_sorted, iter2_sorted)
+    (iter1, iter2) match {
+      case (Nil, Nil) => Iterator()
+      case (_, Nil) =>
+        Check.weakAssert(logger)(iter1.length == 1, s"iter1.length is not equal to 1")
+        iter1.head
+      case (_, _) =>
+        val (iter1_sorted: Iterator[Record], iter2_sorted: Iterator[Record]) =
+          (mergeSortIterators(iter1), mergeSortIterators(iter2))
+        mergeIterators(iter1_sorted, iter2_sorted)
+    }
   }
 
   // sort the file of input path and save it in the output directory
