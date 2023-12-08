@@ -6,6 +6,7 @@ import com.blue.proto.record._
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
 
+import java.util.concurrent.atomic.AtomicInteger
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.io._
@@ -31,15 +32,23 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   }
 
   def saveDistributedRecords(records: Seq[Record]): Unit = {
-    val file: File = new File(distributedPath)
-    if (!file.exists) file.createNewFile
-    val distributedWriter: FileWriter = new FileWriter(file, true)
-    try {
-      // TODO: is this too slow?
-      records foreach (record => Files.write(Paths.get(distributedPath), record.key.toByteArray ++ record.value.toByteArray, StandardOpenOption.APPEND))
-    } finally {
-      distributedWriter.close()
+    saveRecords(distributedDirectory, records)
+  }
+
+  // Keeps track of the "number of times saveRecords is called for a given directory"
+  private val savedHistory: Map[String, AtomicInteger] =
+    Map(inputSortedDirectory -> new AtomicInteger(0), distributedDirectory -> new AtomicInteger(0))
+
+  private def saveRecords(directory: String, records: Seq[Record]): Unit = {
+    Check.weakAssert(logger)(savedHistory.contains(directory), s"Directory $directory not found in savedHistory $savedHistory")
+    val num: Int = savedHistory(directory).getAndIncrement()
+    val file: File = new File(directory + File.separator + num)
+    Check.weakAssert(logger)(!file.exists, s"File $file already exists")
+
+    val recordsConcatenated: Array[Byte] = (records foldLeft Array[Byte]()) {
+      (acc, record) => acc ++ record.key.toByteArray ++ record.value.toByteArray
     }
+    Files.write(Paths.get(file.getPath), recordsConcatenated)
   }
 
   def getSamples: List[Record] = {
