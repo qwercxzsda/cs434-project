@@ -88,12 +88,14 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   // Keeps track of the "number of times saveRecordsToDirectory is called for a given directory"
   private val savedHistory: Map[String, AtomicInteger] =
-    Map(inputSortedDirectory -> new AtomicInteger(0), distributedDirectory -> new AtomicInteger(0))
+    Map(inputSortedDirectory -> new AtomicInteger(0),
+      distributedDirectory -> new AtomicInteger(0),
+      outputDirectory -> new AtomicInteger(0))
 
   private def saveRecordsToDirectory(directory: String, records: Seq[Record]): Unit = {
     Check.weakAssert(logger)(savedHistory.contains(directory), s"Directory $directory not found in savedHistory $savedHistory")
     val num: Int = savedHistory(directory).getAndIncrement()
-    val file: File = new File(directory + File.separator + num)
+    val file: File = new File(directory + File.separator + "partition" + num)
     Check.weakAssert(logger)(!file.exists, s"File $file already exists")
 
     val recordsConcatenated: Array[Byte] = (records foldLeft Array[Byte]()) {
@@ -104,7 +106,27 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   def sortDistributedRecords(): Unit = {
     logger.info(s"Sorting distributed records")
-    sort(distributedPath, outputPath)
+    val distributedPaths = getPathsFromDirectory(distributedDirectory)
+    val bufferedSources_iterators: List[(BufferedSource, Iterator[Record])] =
+      distributedPaths map openFile
+    val bufferedSources: List[BufferedSource] = bufferedSources_iterators map (_._1)
+    val iterators: List[Iterator[Record]] = bufferedSources_iterators map (_._2)
+
+    val iterator_merged: Iterator[Record] = mergeSortIterators(iterators)
+    val iteratorBlocked: Iterator[List[Record]] =
+      iterator_merged.grouped(RecordConfig.writeBlockSize) map (_.toList)
+    iteratorBlocked foreach (records => saveRecordsToDirectory(outputDirectory, records))
+    bufferedSources foreach (_.close())
+  }
+
+  def mergeIterators(iter1: Iterator[Record], iter2: Iterator[Record]): Iterator[Record] = {
+    // TODO: implement
+    iter1
+  }
+
+  def mergeSortIterators(iterators: List[Iterator[Record]]): Iterator[Record] = {
+    // TODO: implement
+    iterators.head
   }
 
   def getSortResult: (Record, Record) = {
