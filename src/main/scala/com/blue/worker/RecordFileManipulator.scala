@@ -28,7 +28,9 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   private val inputPaths: List[String] = inputDirectories flatMap getPathsFromDirectory
   private val inputSortComplete: Future[List[Unit]] =
     Future.sequence(inputPaths map (path => Future {
+      logger.info(s"Sorting $path started")
       sortAndSaveToDirectory(path, inputSortedDirectory)
+      logger.info(s"Sorting $path completed")
     }))
 
   logger.info(s"RecordFileManipulator instantiated")
