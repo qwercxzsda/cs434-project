@@ -6,21 +6,21 @@ import com.blue.proto.distribute._
 import com.blue.proto.sort._
 import com.blue.proto.master._
 import com.blue.proto.worker._
-
 import com.blue.network.NetworkConfig
 import com.blue.check.Check
-
 import com.google.protobuf.ByteString
 import com.blue.bytestring_ordering.ByteStringOrdering._
+
 import scala.math.Ordered.orderingToOrdered
 import io.grpc.{Server, ServerBuilder}
-import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
+import io.grpc.{ManagedChannel, ManagedChannelBuilder, StatusRuntimeException}
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
 import scala.io.BufferedSource
 import com.typesafe.scalalogging.Logger
 
+import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.{async, await}
@@ -117,7 +117,8 @@ object Worker extends App {
     val ranges: Map[String, ByteString] = await(distributeStartComplete.future)
     val workerIps: List[String] = ranges.keys.toList
     val rangeBegins: List[ByteString] = ranges.values.toList
-    val (recordsToDistribute: Iterator[Record], toClose: BufferedSource) = recordFileManipulator.getRecordsToDistribute
+    val (toClose: List[BufferedSource], recordsToDistribute: List[Iterator[Record]]) =
+      await(recordFileManipulator.getRecordsToDistribute).unzip
     try {
       logger.info(s"Sending DistributeRequest for all samples to designated workers(Distribution started)")
       val channels = workerIps map { ip =>
@@ -126,23 +127,33 @@ object Worker extends App {
       }
       val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
 
-      def distributeOneRecord(record: Record): Unit = {
-        val key = record.key
+      @tailrec
+      def distributeOneBlock(records: Seq[Record]): Unit = {
+        if (records.isEmpty) ()
+        else {
+          val designatedWorker: Int = getDesignatedWorker(records.head)
+          val (send: Seq[Record], remain: Seq[Record]) = records span (record => designatedWorker == getDesignatedWorker(record))
+          val blockingStub: WorkerGrpc.WorkerBlockingStub = blockingStubs(designatedWorker)
+          val request: DistributeRequest = DistributeRequest(ip = NetworkConfig.ip, records = send)
+          val response: DistributeResponse = blockingStub.distribute(request)
+          distributeOneBlock(remain)
+        }
+      }
+
+      def getDesignatedWorker(record: Record): Int = {
+        val key: ByteString = record.key
         // send to the last worker whose rangeBegin is greater than or equal to the key
         val blockingStubIdx: Int = rangeBegins lastIndexWhere (rangeBegin => key >= rangeBegin)
         // As rangeBegins are calculated from samples, there might be a record whose key is smaller than all rangeBegins
         // In this case, send the record to the first worker
-        val blockingStub: WorkerGrpc.WorkerBlockingStub = blockingStubs(if (blockingStubIdx == -1) 0 else blockingStubIdx)
-        // TODO: send blocks of records for efficiency
-        val request: DistributeRequest = DistributeRequest(ip = NetworkConfig.ip, records = Seq(record))
-        val response: DistributeResponse = blockingStub.distribute(request)
+        if (blockingStubIdx == -1) 0 else blockingStubIdx
       }
 
       blocking {
-        recordsToDistribute foreach distributeOneRecord
+        recordsToDistribute foreach distributeOneBlock
       }
     } finally {
-      recordFileManipulator.closeRecordsToDistribute(toClose)
+      toClose foreach recordFileManipulator.closeRecordsToDistribute
     }
     // Must wait for response
     // If not, the worker will start sorting before all records are distributed
