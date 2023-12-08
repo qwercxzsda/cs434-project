@@ -128,11 +128,11 @@ object Worker extends App {
       val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
 
       @tailrec
-      def distributeOneBlock(records: Seq[Record]): Unit = {
+      def distributeOneBlock(records: List[Record]): Unit = {
         if (records.isEmpty) ()
         else {
           val designatedWorker: Int = getDesignatedWorker(records.head)
-          val (send: Seq[Record], remain: Seq[Record]) = records span (record => designatedWorker == getDesignatedWorker(record))
+          val (send: List[Record], remain: List[Record]) = records span (record => designatedWorker == getDesignatedWorker(record))
           val blockingStub: WorkerGrpc.WorkerBlockingStub = blockingStubs(designatedWorker)
           val request: DistributeRequest = DistributeRequest(ip = NetworkConfig.ip, records = send)
           val response: DistributeResponse = blockingStub.distribute(request)
@@ -150,7 +150,7 @@ object Worker extends App {
       }
 
       blocking {
-        recordsToDistribute foreach distributeOneBlock
+        recordsToDistribute foreach { iter: Iterator[Record] => distributeOneBlock(iter.toList) }
       }
     } finally {
       toClose foreach recordFileManipulator.closeRecordsToDistribute

@@ -136,8 +136,8 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   private def splitIterators(iterators: List[Iterator[Record]], left: List[Iterator[Record]],
                              right: List[Iterator[Record]]): (List[Iterator[Record]], List[Iterator[Record]]) = {
     iterators match {
-      case List() => (left, right)
-      case List(iter) => (iter :: left, right)
+      case Nil => (left, right)
+      case iter :: Nil => (iter :: left, right)
       case iter1 :: iter2 :: tail => splitIterators(tail, iter1 :: left, iter2 :: right)
     }
   }
