@@ -113,7 +113,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
       (distributedPaths map openFile).unzip
     val iteratorMerged: Iterator[Record] = mergeSortIterators(iterators)
     val iteratorInBlocks: Iterator[List[Record]] =
-      iteratorMerged.grouped(RecordConfig.writeBlockSize) map (_.toList)
+      iteratorMerged.grouped(RecordConfig.writeBlockNum) map (_.toList)
     try {
       iteratorInBlocks foreach (records => saveRecordsToDirectory(outputDirectory, records))
     } finally {

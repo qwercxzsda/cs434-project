@@ -52,7 +52,8 @@ object Worker extends App {
   private val workerComplete: Future[Unit] = sendSortComplete
 
   private val server = ServerBuilder.
-    forPort(NetworkConfig.port).
+    forPort(NetworkConfig.port).maxInboundMessageSize(4 * RecordConfig.writeBlockSize).
+    asInstanceOf[ServerBuilder[_]].
     addService(WorkerGrpc.bindService(new WorkerImpl, ExecutionContext.global)).
     asInstanceOf[ServerBuilder[_]].
     build.start
