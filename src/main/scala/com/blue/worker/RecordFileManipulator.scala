@@ -70,26 +70,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     }
   }
 
-  def saveDistributedRecords(records: Seq[Record]): Unit = {
-    saveRecords(distributedDirectory, records)
-  }
-
-  // Keeps track of the "number of times saveRecords is called for a given directory"
-  private val savedHistory: Map[String, AtomicInteger] =
-    Map(inputSortedDirectory -> new AtomicInteger(0), distributedDirectory -> new AtomicInteger(0))
-
-  private def saveRecords(directory: String, records: Seq[Record]): Unit = {
-    Check.weakAssert(logger)(savedHistory.contains(directory), s"Directory $directory not found in savedHistory $savedHistory")
-    val num: Int = savedHistory(directory).getAndIncrement()
-    val file: File = new File(directory + File.separator + num)
-    Check.weakAssert(logger)(!file.exists, s"File $file already exists")
-
-    val recordsConcatenated: Array[Byte] = (records foldLeft Array[Byte]()) {
-      (acc, record) => acc ++ record.key.toByteArray ++ record.value.toByteArray
-    }
-    Files.write(Paths.get(file.getPath), recordsConcatenated)
-  }
-
+  // must call closeRecordsToDistribute on each returned BufferedSource
   def getRecordsToDistribute: Future[List[(BufferedSource, Iterator[Record])]] = async {
     await(inputSortComplete)
     logger.info(s"Obtaining records to distribute")
@@ -99,6 +80,26 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   def closeRecordsToDistribute(toClose: BufferedSource): Unit = {
     toClose.close()
+  }
+
+  def saveDistributedRecords(records: Seq[Record]): Unit = {
+    saveRecordsToDirectory(distributedDirectory, records)
+  }
+
+  // Keeps track of the "number of times saveRecordsToDirectory is called for a given directory"
+  private val savedHistory: Map[String, AtomicInteger] =
+    Map(inputSortedDirectory -> new AtomicInteger(0), distributedDirectory -> new AtomicInteger(0))
+
+  private def saveRecordsToDirectory(directory: String, records: Seq[Record]): Unit = {
+    Check.weakAssert(logger)(savedHistory.contains(directory), s"Directory $directory not found in savedHistory $savedHistory")
+    val num: Int = savedHistory(directory).getAndIncrement()
+    val file: File = new File(directory + File.separator + num)
+    Check.weakAssert(logger)(!file.exists, s"File $file already exists")
+
+    val recordsConcatenated: Array[Byte] = (records foldLeft Array[Byte]()) {
+      (acc, record) => acc ++ record.key.toByteArray ++ record.value.toByteArray
+    }
+    Files.write(Paths.get(file.getPath), recordsConcatenated)
   }
 
   def sortDistributedRecords(): Unit = {
@@ -128,7 +129,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     }
 
     val sortedRecords: List[Record] = records.sortBy(_.key)
-    saveRecords(outputDirectory, sortedRecords)
+    saveRecordsToDirectory(outputDirectory, sortedRecords)
   }
 
   private def openFile(fileName: String): (BufferedSource, Iterator[Record]) = {
