@@ -114,8 +114,11 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val iteratorMerged: Iterator[Record] = mergeSortIterators(iterators)
     val iteratorInBlocks: Iterator[List[Record]] =
       iteratorMerged.grouped(RecordConfig.writeBlockSize) map (_.toList)
-    iteratorInBlocks foreach (records => saveRecordsToDirectory(outputDirectory, records))
-    bufferedSources foreach (_.close())
+    try {
+      iteratorInBlocks foreach (records => saveRecordsToDirectory(outputDirectory, records))
+    } finally {
+      bufferedSources foreach (_.close())
+    }
   }
 
   private def mergeIterators(iter1: Iterator[Record], iter2: Iterator[Record]): Iterator[Record] = {
