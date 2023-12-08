@@ -11,11 +11,14 @@ import com.blue.network.NetworkConfig
 import com.blue.check.Check
 
 import com.google.protobuf.ByteString
+import com.blue.bytestring_ordering.ByteStringOrdering._
+import scala.math.Ordered.orderingToOrdered
 import io.grpc.{Server, ServerBuilder}
 import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
+import scala.math.Ordering.comparatorToOrdering
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
@@ -32,7 +35,7 @@ object Master extends App {
   private val registerRequests: ConcurrentLinkedQueue[RegisterRequest] = new ConcurrentLinkedQueue[RegisterRequest]()
   private val registerAllComplete: Promise[Unit] = Promise()
   private val workerIps: Future[List[String]] = getWorkerIps
-  private val ranges: Future[List[String]] = getRanges
+  private val ranges: Future[List[ByteString]] = getRanges
   sendDistributeStart
 
   private val distributeCompleteRequests: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
@@ -101,7 +104,7 @@ object Master extends App {
     workerIps
   }
 
-  private def getRanges: Future[List[String]] = async {
+  private def getRanges: Future[List[ByteString]] = async {
     await(registerAllComplete.future)
     val keys = for {
       request <- registerRequests.asScala.toList
@@ -117,7 +120,7 @@ object Master extends App {
   private def sendDistributeStart: Future[Unit] = async {
     val workerIps = await(this.workerIps)
     val ranges = await(this.ranges)
-    val workerIpRangeMap: Map[String, String] = (workerIps zip ranges).toMap
+    val workerIpRangeMap: Map[String, ByteString] = (workerIps zip ranges).toMap
     val channels = workerIps map { ip =>
       ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).
         usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build

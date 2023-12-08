@@ -1,11 +1,13 @@
 package com.blue.record_file_manipulator
 
 import com.blue.proto.record._
-
 import com.blue.check.Check
+import com.google.protobuf.ByteString
+import com.blue.bytestring_ordering.ByteStringOrdering._
 
+import scala.math.Ordered.orderingToOrdered
 import java.io.{File, FileWriter}
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.io._
 import com.typesafe.scalalogging.Logger
 
@@ -35,7 +37,8 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     if (!file.exists) file.createNewFile
     val distributedWriter: FileWriter = new FileWriter(file, true)
     try {
-      records foreach (record => distributedWriter.write(record.key + record.value + "\n"))
+      // TODO: is this too slow?
+      records foreach (record => Files.write(Paths.get(distributedPath), record.key.toByteArray ++ record.value.toByteArray, StandardOpenOption.APPEND))
     } finally {
       distributedWriter.close()
     }
@@ -45,11 +48,9 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     // sampling is done on unsorted input file
     logger.info(s"Sampling $sampleNum records from $inputPath")
 
-    val inputSource: BufferedSource = scala.io.Source.fromFile(inputPath)
-    val inputIterator: Iterator[String] = inputSource.getLines()
+    val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(inputPath)
     val samples: List[Record] = try {
-      val samplesString: List[String] = inputIterator.take(sampleNum).toList
-      samplesString map stringToRecord
+      inputIterator.take(sampleNum).toList
     } finally {
       inputSource.close()
     }
@@ -59,10 +60,8 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   def getRecordsToDistribute: (Iterator[Record], BufferedSource) = {
     logger.info(s"Obtaining records to distribute")
     sort(inputPath, inputSortedPath)
-    val inputSortedSource: BufferedSource = scala.io.Source.fromFile(inputSortedPath)
-    val inputSortedIterator: Iterator[String] = inputSortedSource.getLines()
-    val recordsToDistribute: Iterator[Record] = inputSortedIterator map stringToRecord
-    (recordsToDistribute, inputSortedSource)
+    val (inputSortedSource: BufferedSource, inputSortedIterator: Iterator[Record]) = openFile(inputSortedPath)
+    (inputSortedIterator, inputSortedSource)
   }
 
   def closeRecordsToDistribute(toClose: BufferedSource): Unit = {
@@ -77,11 +76,10 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   def getSortResult: (Record, Record) = {
     // TODO: this implementation only works for data fitting in memory
     logger.info(s"Obtaining sort result")
-    val outputSource: BufferedSource = scala.io.Source.fromFile(outputPath)
-    val outputIterator: Iterator[String] = outputSource.getLines()
+    val (outputSource: BufferedSource, outputIterator: Iterator[Record]) = openFile(outputPath)
     try {
-      val recordsString: List[String] = outputIterator.toList
-      (stringToRecord(recordsString.head), stringToRecord(recordsString.last))
+      val records: List[Record] = outputIterator.toList
+      (records.head, records.last)
     } finally {
       outputSource.close()
     }
@@ -90,30 +88,38 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   // sort files in input path and save in output path
   private def sort(inputPath: String, outputPath: String): Unit = {
     // TODO: this implementation only works for data fitting in memory
-    val inputSource: BufferedSource = scala.io.Source.fromFile(inputPath)
-    val inputIterator: Iterator[String] = inputSource.getLines()
-    val records: List[String] = try {
+    val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(inputPath)
+    val records: List[Record] = try {
       inputIterator.toList
     } finally {
       inputSource.close()
     }
 
-    val sortedRecords: List[String] = records.sorted
+    val sortedRecords: List[Record] = records.sortBy(_.key)
 
     val file: File = new File(outputPath)
     if (!file.exists) file.createNewFile
     val outputWriter: FileWriter = new FileWriter(file)
     try {
+      // TODO: change this filewrite
       sortedRecords foreach (record => outputWriter.write(record + "\n"))
     } finally {
       outputWriter.close()
     }
   }
 
-  private def stringToRecord(string: String): Record = {
-    val key: String = string.substring(0, keyLength)
-    val value: String = string.substring(keyLength)
-    Check.weakAssertEq(logger)(key.length, keyLength, s"key.length is not equal to keyLength")
+  private def openFile(fileName: String): (BufferedSource, Iterator[Record]) = {
+    val inputSource: BufferedSource = scala.io.Source.fromFile(fileName, "ISO-8859-1")
+    val inputIterator: Iterator[Record] = inputSource.grouped(keyLength + valueLength) map stringToRecord
+    (inputSource, inputIterator)
+  }
+
+  private def stringToRecord(seqChar: Seq[Char]): Record = {
+    val arrayByte: Array[Byte] = seqChar.map(_.toByte).toArray
+    val key: ByteString = ByteString.copyFrom(arrayByte.take(keyLength))
+    val value: ByteString = ByteString.copyFrom(arrayByte.drop(keyLength))
+    Check.weakAssertEq(logger)(key.size(), keyLength, s"key.length is not equal to keyLength")
+    Check.weakAssertEq(logger)(value.size(), valueLength, s"value.length is not equal to valueLength")
     Record(key, value)
   }
 }

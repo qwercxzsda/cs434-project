@@ -12,6 +12,8 @@ import com.blue.check.Check
 import com.blue.record_file_manipulator.RecordFileManipulator
 
 import com.google.protobuf.ByteString
+import com.blue.bytestring_ordering.ByteStringOrdering._
+import scala.math.Ordered.orderingToOrdered
 import io.grpc.{Server, ServerBuilder}
 import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 
@@ -40,7 +42,7 @@ object Worker extends App {
   private val samples: Future[List[Record]] = getSamples
   sendRegister
 
-  private val distributeStartComplete: Promise[Map[String, String]] = Promise()
+  private val distributeStartComplete: Promise[Map[String, ByteString]] = Promise()
   private val distributeComplete: Future[Unit] = sendDistribute
   sendDistributeComplete
 
@@ -111,9 +113,9 @@ object Worker extends App {
   // Send Distribute(i.e., send block of records) request to designated worker
   // This distributes(shuffles) records among workers
   private def sendDistribute: Future[Unit] = async {
-    val ranges: Map[String, String] = await(distributeStartComplete.future)
+    val ranges: Map[String, ByteString] = await(distributeStartComplete.future)
     val workerIps: List[String] = ranges.keys.toList
-    val rangeBegins: List[String] = ranges.values.toList
+    val rangeBegins: List[ByteString] = ranges.values.toList
     val (recordsToDistribute: Iterator[Record], toClose: BufferedSource) = recordFileManipulator.getRecordsToDistribute
     try {
       logger.info(s"Sending DistributeRequest for all samples to designated workers(Distribution started)")

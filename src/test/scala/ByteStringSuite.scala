@@ -24,5 +24,6 @@ class ByteStringSuite extends AnyFunSuite {
     assert(byteString1 < byteString2)
     assert(byteString2 < byteString3)
     assert(byteString1 < byteString3)
+    assert(ByteString.EMPTY < byteString1)
   }
 }
