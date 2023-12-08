@@ -9,7 +9,6 @@ import com.blue.proto.worker._
 
 import com.blue.network.NetworkConfig
 import com.blue.check.Check
-import com.blue.record_file_manipulator.RecordFileManipulator
 
 import com.google.protobuf.ByteString
 import com.blue.bytestring_ordering.ByteStringOrdering._

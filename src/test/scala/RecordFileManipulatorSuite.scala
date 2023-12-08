@@ -1,8 +1,7 @@
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.PrivateMethodTester
-
 import com.blue.proto.record.Record
-import com.blue.record_file_manipulator._
+import com.blue.worker.RecordFileManipulator
 import com.google.protobuf.ByteString
 
 import scala.io.BufferedSource

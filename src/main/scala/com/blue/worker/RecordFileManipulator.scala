@@ -1,15 +1,14 @@
-package com.blue.record_file_manipulator
+package com.blue.worker
 
-import com.blue.proto.record._
-import com.blue.check.Check
-import com.google.protobuf.ByteString
 import com.blue.bytestring_ordering.ByteStringOrdering._
+import com.blue.check.Check
+import com.blue.proto.record._
+import com.google.protobuf.ByteString
+import com.typesafe.scalalogging.Logger
 
-import scala.math.Ordered.orderingToOrdered
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.io._
-import com.typesafe.scalalogging.Logger
 
 class RecordFileManipulator(inputDirectories: List[String], outputDirectory: String) {
   private val logger: Logger = Logger("RecordFileManipulator")
