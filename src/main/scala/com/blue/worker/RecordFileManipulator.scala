@@ -13,20 +13,22 @@ import scala.io._
 class RecordFileManipulator(inputDirectories: List[String], outputDirectory: String) {
   private val logger: Logger = Logger("RecordFileManipulator")
 
-  private val inputPath: String = inputDirectories.head + "/partition1"
-  private val outputPath: String = outputDirectory + "/partition1"
-  private val inputSortedPath: String = outputDirectory + "/tmp1/partition1"
-  private val distributedPath: String = outputDirectory + "/tmp2/partition1"
+  private val inputSortedDirectory: String = outputDirectory + File.separator + "tmp1"
+  private val distributedDirectory: String = outputDirectory + File.separator + "tmp2"
 
-  Files.deleteIfExists(Paths.get(outputPath))
-  Files.deleteIfExists(Paths.get(inputSortedPath))
-  Files.deleteIfExists(Paths.get(distributedPath))
+  List(outputDirectory, inputSortedDirectory, distributedDirectory) foreach initializeDirectory
 
   logger.info(s"RecordFileManipulator instantiated")
-  logger.info(s"inputPath: $inputPath")
-  logger.info(s"outputPath: $outputPath")
-  logger.info(s"inputSortedPath: $inputSortedPath")
-  logger.info(s"distributedPath: $distributedPath")
+  logger.info(s"inputDirectories: $inputDirectories")
+  logger.info(s"outputDirectory: $outputDirectory")
+  logger.info(s"inputSortedDirectory: $inputSortedDirectory")
+  logger.info(s"distributedDirectory: $distributedDirectory")
+
+  private def initializeDirectory(directoryName: String): Unit = {
+    val directory: File = new File(directoryName)
+    if (!directory.exists) directory.mkdirs
+    directory.listFiles() foreach { file => if (!file.isDirectory) file.delete() }
+  }
 
   def saveDistributedRecords(records: Seq[Record]): Unit = {
     val file: File = new File(distributedPath)
