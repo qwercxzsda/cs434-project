@@ -13,7 +13,7 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
       PrivateMethod[(BufferedSource, Iterator[Record])](Symbol("openFile"))
 
     val outputDir: String = "src/test/resources/temp"
-    val recordFileManipulator = new RecordFileManipulator(List("."), outputDir)
+    val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
     val inputPath: String = "src/test/resources/data_simple/single_ascii"
     val (inputSource, inputIterator) = recordFileManipulator invokePrivate decorateOpenFile(inputPath)
     val records: List[Record] = inputIterator.toList
@@ -41,7 +41,7 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
       PrivateMethod[Iterator[Record]](Symbol("mergeSortIterators"))
 
     val outputDir: String = "src/test/resources/temp"
-    val recordFileManipulator = new RecordFileManipulator(List("."), outputDir)
+    val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
     val list1 = List(1, 3, 4, 5, 7, 10)
     val list2 = List(3, 6, 8, 9, 10)
     val iterator1: Iterator[Record] = list1.iterator map (i => Record(ByteString.copyFrom(Array(i.toByte)), ByteString.EMPTY))
@@ -51,22 +51,28 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
     println(s"records: $records")
     assert(records === records.sortBy(_.key))
   }
-  //  test("MergeSortIterators") {
-  //    val decorateMergeSortIterators: PrivateMethod[Iterator[Record]] =
-  //      PrivateMethod[Iterator[Record]](Symbol("mergeSortIterators"))
-  //
-  //    val outputDir: String = "src/test/resources/temp"
-  //    val recordFileManipulator = new RecordFileManipulator(List("."), outputDir)
-  //    val inputPath1: String = "src/test/resources/data_simple/single_ascii"
-  //    val inputPath2: String = "src/test/resources/data_simple/single_ascii"
-  //    val (inputSource1, inputIterator1) = recordFileManipulator.openFile(inputPath1)
-  //    val (inputSource2, inputIterator2) = recordFileManipulator.openFile(inputPath2)
-  //    val iterator1: Iterator[Record] = inputIterator1
-  //    val iterator2: Iterator[Record] = inputIterator2
-  //    val iterator: Iterator[Record] = recordFileManipulator invokePrivate decorateMergeSortIterators(List(iterator1, iterator2))
-  //    val records: List[Record] = iterator.toList
-  //    assert(records.length == 2)
-  //    val record1 = records.head
-  //    val record2 = records.tail.head
-  //  }
+
+  test("MergeSortIterators lazy?") {
+    val decorateMergeSortIterators: PrivateMethod[Iterator[Record]] =
+      PrivateMethod[Iterator[Record]](Symbol("mergeSortIterators"))
+
+    val outputDir: String = "src/test/resources/temp"
+    val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
+    val list1 = List(1, 3, 4, 5, 7, 10)
+    val list2 = List(3, 6, 8, 9, 10)
+    val iterator1: Iterator[Record] = list1.iterator map { i => {
+      println(s"i: $i")
+      Record(ByteString.copyFrom(Array(i.toByte)), ByteString.EMPTY)
+    }
+    }
+    val iterator2: Iterator[Record] = list2.iterator map { j => {
+      println(s"j: $j")
+      Record(ByteString.copyFrom(Array(j.toByte)), ByteString.EMPTY)
+    }
+    }
+    val iterator: Iterator[Record] = recordFileManipulator invokePrivate decorateMergeSortIterators(List(iterator1, iterator2))
+    val records: List[Record] = iterator.take(4).toList
+    println(s"records: $records")
+    assert(records === records.sortBy(_.key))
+  }
 }
