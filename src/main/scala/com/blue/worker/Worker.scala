@@ -38,6 +38,8 @@ object Worker extends App {
   private val outputDirectory: String = arguments("-O").head
   private val recordFileManipulator: RecordFileManipulator = new RecordFileManipulator(inputDirectories, outputDirectory)
 
+  private val masterChannel: ManagedChannel = getMasterChannel
+
   private val samples: Future[List[Record]] = getSamples
   sendRegister
 
@@ -48,8 +50,6 @@ object Worker extends App {
   private val sortStartComplete: Promise[Unit] = Promise()
   private val sortComplete: Future[Unit] = sort
   private val workerComplete: Future[Unit] = sendSortComplete
-
-  private val masterChannel: ManagedChannel = getMasterChannel
 
   private val server = ServerBuilder.
     forPort(NetworkConfig.port).

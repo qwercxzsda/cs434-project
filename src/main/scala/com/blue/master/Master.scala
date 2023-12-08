@@ -36,14 +36,13 @@ object Master extends App {
   private val registerAllComplete: Promise[Unit] = Promise()
   private val workerIps: Future[List[String]] = getWorkerIps
   private val ranges: Future[List[ByteString]] = getRanges
+  private val workerChannels: Future[List[ManagedChannel]] = getWorkerChannels
   sendDistributeStart
 
   private val distributeCompleteRequests: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
   private val distributeCompleteAllComplete: Promise[Unit] = Promise()
   private val distributeCompleteWorkerIps: Future[List[String]] = getDistributeCompleteWorkerIps
   sendSortStart
-
-  private val workerChannels: Future[List[ManagedChannel]] = getWorkerChannels
 
   private val sortCompleteRequests: ConcurrentLinkedQueue[SortCompleteRequest] = new ConcurrentLinkedQueue[SortCompleteRequest]()
   private val sortCompleteAllComplete: Promise[Unit] = Promise()
@@ -62,10 +61,10 @@ object Master extends App {
     Await.result(sortCompleteAllComplete.future, Duration.Inf)
   }
   logger.info(s"All the workers finished sorting, MasterComplete")
-  async {
-    await(workerChannels).foreach(_.shutdown())
-    server.shutdown()
+  blocking {
+    Await.result(workerChannels, Duration.Inf).foreach(_.shutdown())
   }
+  server.shutdown()
   private val result: List[SortCompleteRequest] = sortCompleteRequests.asScala.toList
   Check.weakAssertEq(logger)(result.length, workerNum, "result.length is not equal to workerNum")
   Check.masterResult(logger)(result)
@@ -157,7 +156,7 @@ object Master extends App {
   }
 
   private def getWorkerChannels: Future[List[ManagedChannel]] = async {
-    val workerIps: List[String] = await(distributeCompleteWorkerIps)
+    val workerIps: List[String] = await(this.workerIps)
     val workerChannels: List[ManagedChannel] = workerIps map { ip =>
       ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).
         usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
