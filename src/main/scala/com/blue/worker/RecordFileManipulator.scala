@@ -12,9 +12,6 @@ import scala.io._
 
 class RecordFileManipulator(inputDirectories: List[String], outputDirectory: String) {
   private val logger: Logger = Logger("RecordFileManipulator")
-  private val sampleNum: Int = 10
-  private val keyLength: Int = 10
-  private val valueLength: Int = 90
 
   private val inputPath: String = inputDirectories.head + "/partition1"
   private val outputPath: String = outputDirectory + "/partition1"
@@ -45,11 +42,11 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   def getSamples: List[Record] = {
     // sampling is done on unsorted input file
-    logger.info(s"Sampling $sampleNum records from $inputPath")
+    logger.info(s"Sampling ${RecordConfig.sampleNum} records from $inputPath")
 
     val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(inputPath)
     val samples: List[Record] = try {
-      inputIterator.take(sampleNum).toList
+      inputIterator.take(RecordConfig.sampleNum).toList
     } finally {
       inputSource.close()
     }
@@ -109,16 +106,16 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   private def openFile(fileName: String): (BufferedSource, Iterator[Record]) = {
     val inputSource: BufferedSource = scala.io.Source.fromFile(fileName, "ISO-8859-1")
-    val inputIterator: Iterator[Record] = inputSource.grouped(keyLength + valueLength) map stringToRecord
+    val inputIterator: Iterator[Record] = inputSource.grouped(RecordConfig.recordLength) map stringToRecord
     (inputSource, inputIterator)
   }
 
   private def stringToRecord(seqChar: Seq[Char]): Record = {
     val arrayByte: Array[Byte] = seqChar.map(_.toByte).toArray
-    val key: ByteString = ByteString.copyFrom(arrayByte.take(keyLength))
-    val value: ByteString = ByteString.copyFrom(arrayByte.drop(keyLength))
-    Check.weakAssertEq(logger)(key.size(), keyLength, s"key.length is not equal to keyLength")
-    Check.weakAssertEq(logger)(value.size(), valueLength, s"value.length is not equal to valueLength")
+    val key: ByteString = ByteString.copyFrom(arrayByte.take(RecordConfig.keyLength))
+    val value: ByteString = ByteString.copyFrom(arrayByte.drop(RecordConfig.keyLength))
+    Check.weakAssertEq(logger)(key.size(), RecordConfig.keyLength, s"key.length is not equal to keyLength")
+    Check.weakAssertEq(logger)(value.size(), RecordConfig.valueLength, s"value.length is not equal to valueLength")
     Record(key, value)
   }
 }

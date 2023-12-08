@@ -1,17 +1,18 @@
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.PrivateMethodTester
 import com.blue.proto.record.Record
-import com.blue.worker.RecordFileManipulator
+import com.blue.worker.{RecordFileManipulator, RecordConfig}
 import com.google.protobuf.ByteString
 
 import scala.io.BufferedSource
 
 class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
   test("openFile") {
-    val recordFileManipulator = new RecordFileManipulator(List(""), "")
     val decorateOpenFile: PrivateMethod[(BufferedSource, Iterator[Record])] =
       PrivateMethod[(BufferedSource, Iterator[Record])](Symbol("openFile"))
 
+    val outputDir: String = "src/test/resources/temp"
+    val recordFileManipulator = new RecordFileManipulator(List("."), outputDir)
     val inputPath: String = "src/test/resources/data_simple/single_ascii"
     val (inputSource, inputIterator) = recordFileManipulator invokePrivate decorateOpenFile(inputPath)
     val records: List[Record] = inputIterator.toList
@@ -27,8 +28,8 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
       0x30, 0x30, 0x32, 0x32, 0x32, 0x32, 0x30, 0x30, 0x30, 0x30, 0x32, 0x32, 0x32, 0x32, 0x30, 0x30,
       0x30, 0x30, 0x32, 0x32, 0x32, 0x32, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x31,
       0x31, 0x31, 0x0d, 0x0a) map (_.toByte)
-    val byteStringKey: ByteString = ByteString.copyFrom(byteArray.take(10))
-    val byteStringValue: ByteString = ByteString.copyFrom(byteArray.drop(10))
+    val byteStringKey: ByteString = ByteString.copyFrom(byteArray.take(RecordConfig.keyLength))
+    val byteStringValue: ByteString = ByteString.copyFrom(byteArray.drop(RecordConfig.keyLength))
     assert(record.key.toByteArray ++ record.value.toByteArray === byteArray)
     assert(record.key === byteStringKey)
     assert(record.value === byteStringValue)
