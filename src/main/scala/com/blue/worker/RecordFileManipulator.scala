@@ -153,18 +153,6 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     mergeIterators(iter1_sorted, iter2_sorted)
   }
 
-  def getSortResult: (Record, Record) = {
-    // TODO: this implementation only works for data fitting in memory
-    logger.info(s"Obtaining sort result")
-    val (outputSource: BufferedSource, outputIterator: Iterator[Record]) = openFile(outputPath)
-    try {
-      val records: List[Record] = outputIterator.toList
-      (records.head, records.last)
-    } finally {
-      outputSource.close()
-    }
-  }
-
   // sort the file of input path and save it in the output directory
   private def sortAndSaveToDirectory(inputPath: String, outputDirectory: String): Unit = {
     val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(inputPath)

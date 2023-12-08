@@ -27,17 +27,10 @@ object Check {
     })
   }
 
-  def checkMasterResult(logger: Logger)(result: List[SortCompleteRequest]): Unit = {
+  def masterResult(logger: Logger)(result: List[SortCompleteRequest]): Unit = {
     val sortedResult: List[SortCompleteRequest] = result sortBy (_.ip)
-    (sortedResult foldLeft ByteString.EMPTY)((acc: ByteString, workerResult: SortCompleteRequest) => {
-      val minKey: ByteString = workerResult.begin.get.key
-      val maxKey: ByteString = workerResult.end.get.key
-      logger.info(s"worker ${workerResult.ip} minKey: $minKey, maxKey: $maxKey")
-      weakAssert(logger)(minKey <= maxKey, s"minKey is larger than maxKey: $minKey, $maxKey")
-      weakAssert(logger)(acc <= minKey, s"keys aren't increasing: $acc, $minKey")
-      maxKey
-    }
-    )
+    val workerIps: List[String] = sortedResult map (_.ip)
+    Check.workerIps(logger)(sortedResult.length, workerIps)
   }
 
   // Similar to assert, but only logs error and does not throw exception

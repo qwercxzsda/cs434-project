@@ -62,7 +62,7 @@ object Master extends App {
   logger.info(s"All the workers finished sorting, MasterComplete")
   private val result: List[SortCompleteRequest] = sortCompleteRequests.asScala.toList
   Check.weakAssertEq(logger)(result.length, workerNum, "result.length is not equal to workerNum")
-  Check.checkMasterResult(logger)(result)
+  Check.masterResult(logger)(result)
 
   private class MasterImpl extends MasterGrpc.Master {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {

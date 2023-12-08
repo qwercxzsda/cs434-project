@@ -21,8 +21,6 @@ message SortStartResponse {
 
 message SortCompleteRequest {
   string ip = 1;
-  Record begin = 2;
-  Record end = 3;
 }
 
 message SortCompleteResponse {
