@@ -42,26 +42,6 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     files map (_.getPath)
   }
 
-  def saveDistributedRecords(records: Seq[Record]): Unit = {
-    saveRecords(distributedDirectory, records)
-  }
-
-  // Keeps track of the "number of times saveRecords is called for a given directory"
-  private val savedHistory: Map[String, AtomicInteger] =
-    Map(inputSortedDirectory -> new AtomicInteger(0), distributedDirectory -> new AtomicInteger(0))
-
-  private def saveRecords(directory: String, records: Seq[Record]): Unit = {
-    Check.weakAssert(logger)(savedHistory.contains(directory), s"Directory $directory not found in savedHistory $savedHistory")
-    val num: Int = savedHistory(directory).getAndIncrement()
-    val file: File = new File(directory + File.separator + num)
-    Check.weakAssert(logger)(!file.exists, s"File $file already exists")
-
-    val recordsConcatenated: Array[Byte] = (records foldLeft Array[Byte]()) {
-      (acc, record) => acc ++ record.key.toByteArray ++ record.value.toByteArray
-    }
-    Files.write(Paths.get(file.getPath), recordsConcatenated)
-  }
-
   // sampling is done on unsorted input file
   def getSamples: List[Record] = {
     if (inputPaths.isEmpty) {
@@ -80,6 +60,26 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
       }
       samples
     }
+  }
+
+  def saveDistributedRecords(records: Seq[Record]): Unit = {
+    saveRecords(distributedDirectory, records)
+  }
+
+  // Keeps track of the "number of times saveRecords is called for a given directory"
+  private val savedHistory: Map[String, AtomicInteger] =
+    Map(inputSortedDirectory -> new AtomicInteger(0), distributedDirectory -> new AtomicInteger(0))
+
+  private def saveRecords(directory: String, records: Seq[Record]): Unit = {
+    Check.weakAssert(logger)(savedHistory.contains(directory), s"Directory $directory not found in savedHistory $savedHistory")
+    val num: Int = savedHistory(directory).getAndIncrement()
+    val file: File = new File(directory + File.separator + num)
+    Check.weakAssert(logger)(!file.exists, s"File $file already exists")
+
+    val recordsConcatenated: Array[Byte] = (records foldLeft Array[Byte]()) {
+      (acc, record) => acc ++ record.key.toByteArray ++ record.value.toByteArray
+    }
+    Files.write(Paths.get(file.getPath), recordsConcatenated)
   }
 
   def getRecordsToDistribute: (Iterator[Record], BufferedSource) = {
