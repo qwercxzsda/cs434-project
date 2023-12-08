@@ -30,12 +30,12 @@ import scala.concurrent.duration._
 
 object Worker extends App {
   private val logger: Logger = Logger("Worker")
-  private val masterIp: String = getMasterIp
+  private val arguments: Map[String, List[String]] = ArgumentParser.parse(args.toList)
+  Check.weakAssert(logger)((arguments("").length == 1) && (arguments("-O").length == 1), s"Too many arguments: $arguments")
+  private val masterIp: String = getMasterIp(arguments("").head)
 
-  // TODO: change to proper argument parsing
-  // TODO: should take multiple input directories
-  private val inputDirectories: List[String] = List(args(2))
-  private val outputDirectory: String = args(4)
+  private val inputDirectories: List[String] = arguments("-I")
+  private val outputDirectory: String = arguments("-O").head
   private val recordFileManipulator: RecordFileManipulator = new RecordFileManipulator(inputDirectories, outputDirectory)
 
   private val samples: Future[List[Record]] = getSamples
@@ -85,10 +85,12 @@ object Worker extends App {
     }
   }
 
-  private def getMasterIp: String = {
-    val port: String = args(0).substring(args(0).indexOf(":")).drop(1)
+  private def getMasterIp(ipAndPort: String): String = {
+    val indexDiv: Int = ipAndPort.indexOf(":")
+    Check.weakAssert(logger)(indexDiv != -1, s"ipAndPort doesn't contain ':', ipAndPort: $ipAndPort")
+    val port: String = ipAndPort.substring(indexDiv).drop(1)
     Check.weakAssertEq(logger)(port, NetworkConfig.port.toString, s"port(from argument) is not equal to NetworkConfig.port")
-    args(0).substring(0, args(0).indexOf(":"))
+    ipAndPort.substring(0, indexDiv)
   }
 
   private def getSamples: Future[List[Record]] = async {
