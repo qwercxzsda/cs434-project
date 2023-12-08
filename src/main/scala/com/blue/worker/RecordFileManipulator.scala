@@ -11,6 +11,10 @@ import java.io.{File, FileWriter}
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.io._
 
+import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.async.Async.{async, await}
+
 class RecordFileManipulator(inputDirectories: List[String], outputDirectory: String) {
   private val logger: Logger = Logger("RecordFileManipulator")
 
@@ -20,6 +24,10 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   List(outputDirectory, inputSortedDirectory, distributedDirectory) foreach initializeDirectory
 
   private val inputPaths: List[String] = inputDirectories flatMap getPathsFromDirectory
+  private val inputSortComplete: Future[List[Unit]] =
+    Future.sequence(inputPaths map (path => Future {
+      sortAndSaveToDirectory(path, inputSortedDirectory)
+    }))
 
   logger.info(s"RecordFileManipulator instantiated")
   logger.info(s"inputDirectories: $inputDirectories")
@@ -82,11 +90,11 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     Files.write(Paths.get(file.getPath), recordsConcatenated)
   }
 
-  def getRecordsToDistribute: (Iterator[Record], BufferedSource) = {
+  def getRecordsToDistribute: Future[List[(BufferedSource, Iterator[Record])]] = async {
+    await(inputSortComplete)
     logger.info(s"Obtaining records to distribute")
-    sort(inputPath, inputSortedPath)
-    val (inputSortedSource: BufferedSource, inputSortedIterator: Iterator[Record]) = openFile(inputSortedPath)
-    (inputSortedIterator, inputSortedSource)
+    val inputSortedPaths: List[String] = getPathsFromDirectory(inputSortedDirectory)
+    inputSortedPaths map openFile
   }
 
   def closeRecordsToDistribute(toClose: BufferedSource): Unit = {
