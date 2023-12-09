@@ -26,12 +26,6 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   List(outputDirectory, inputSortedDirectory, distributedDirectory) foreach initializeDirectory
 
   private val inputPaths: List[String] = inputDirectories flatMap getPathsFromDirectory
-  private val inputSortComplete: Future[List[Unit]] =
-    Future.sequence(inputPaths map (path => Future {
-      logger.info(s"Sorting $path started")
-      sortAndSaveToDirectory(path, inputSortedDirectory)
-      logger.info(s"Sorting $path completed")
-    }))
 
   logger.info(s"RecordFileManipulator instantiated")
   logger.info(s"inputDirectories: $inputDirectories")
@@ -76,6 +70,12 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
 
   // must call closeRecordsToDistribute on each returned BufferedSource
   def getRecordsToDistribute: Future[List[(BufferedSource, Iterator[Record])]] = async {
+    val inputSortComplete: Future[List[Unit]] =
+      Future.sequence(inputPaths map (path => Future {
+        logger.info(s"Sorting $path started")
+        sortAndSaveToDirectory(path, inputSortedDirectory)
+        logger.info(s"Sorting $path completed")
+      }))
     await(inputSortComplete)
     logger.info(s"Obtaining records to distribute")
     val inputSortedPaths: List[String] = getPathsFromDirectory(inputSortedDirectory)
