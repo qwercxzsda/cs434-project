@@ -166,14 +166,13 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   // sort the file of input path and save it in the output directory
   private def sortAndSaveToDirectory(inputPath: String, outputDirectory: String): Unit = {
     val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(inputPath)
-    val records: List[Record] = try {
-      inputIterator.toList
+    try {
+      val iteratorInBlock: Iterator[List[Record]] =
+        inputIterator.grouped(RecordConfig.writeBlockNum) map (_.toList)
+      iteratorInBlock foreach (records => saveRecordsToDirectory(outputDirectory, records.sortBy(_.key)))
     } finally {
       inputSource.close()
     }
-
-    val sortedRecords: List[Record] = records.sortBy(_.key)
-    saveRecordsToDirectory(outputDirectory, sortedRecords)
   }
 
   private def openFile(fileName: String): (BufferedSource, Iterator[Record]) = {
