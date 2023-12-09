@@ -127,8 +127,9 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val head1: Option[Record] = if (iter1.hasNext) Some(iter1.next()) else None
     val head2: Option[Record] = if (iter2.hasNext) Some(iter2.next()) else None
     (head1, head2) match {
-      case (None, _) => iter2
-      case (_, None) => iter1
+      case (None, None) => Iterator()
+      case (None, Some(record)) => Iterator(record) ++ iter2
+      case (Some(record), None) => Iterator(record) ++ iter1
       case (Some(record1), Some(record2)) =>
         if (record1.key < record2.key)
           Iterator(record1) ++ mergeIterators(iter1, Iterator(record2) ++ iter2)

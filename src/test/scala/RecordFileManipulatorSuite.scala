@@ -42,14 +42,18 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
 
     val outputDir: String = "src/test/resources/temp"
     val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
-    val list1 = List(1, 3, 4, 5, 7, 10)
-    val list2 = List(3, 6, 8, 9, 10)
-    val iterator1: Iterator[Record] = list1.iterator map (i => Record(ByteString.copyFrom(Array(i.toByte)), ByteString.EMPTY))
-    val iterator2: Iterator[Record] = list2.iterator map (i => Record(ByteString.copyFrom(Array(i.toByte)), ByteString.EMPTY))
+    val list1_ = List(1, 3, 4, 5, 7, 10)
+    val list2_ = List(3, 6, 8, 9, 10)
+    val list1 = list1_ map (i => Record(ByteString.copyFrom(Array(i.toByte)), ByteString.EMPTY))
+    val list2 = list2_ map (i => Record(ByteString.copyFrom(Array(i.toByte)), ByteString.EMPTY))
+    val iterator1: Iterator[Record] = list1.iterator
+    val iterator2: Iterator[Record] = list2.iterator
     val iterator: Iterator[Record] = recordFileManipulator invokePrivate decorateMergeSortIterators(List(iterator1, iterator2))
     val records: List[Record] = iterator.toList
-    println(s"records: $records")
-    assert(records === records.sortBy(_.key))
+    println(s"list1: ${list1 map (_.key)}\nsize: ${list1.size}")
+    println(s"list2: ${list2 map (_.key)}\nsize: ${list2.size}")
+    println(s"records: ${records map (_.key)}\nsize: ${records.size}")
+    assert(records === (list1 ++ list2).sortBy(_.key))
   }
 
   test("MergeSortIterators lazy?") {
