@@ -26,6 +26,12 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   List(outputDirectory, inputSortedDirectory, distributedDirectory) foreach initializeDirectory
 
   private val inputPaths: List[String] = inputDirectories flatMap getPathsFromDirectory
+  private val inputSortComplete: Future[List[Unit]] =
+    Future.sequence(inputPaths map (path => Future {
+      logger.info(s"Sorting $path started")
+      sortAndSaveToDirectory(path, inputSortedDirectory)
+      logger.info(s"Sorting $path completed")
+    }))
 
   logger.info(s"RecordFileManipulator instantiated")
   logger.info(s"inputDirectories: $inputDirectories")
@@ -49,7 +55,10 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   }
 
   // sampling is done on unsorted input file
-  def getSamples: List[Record] = {
+  def getSamples: Future[List[Record]] = async {
+    // wait is done in order to postpone sending register request until sorting is done
+    // sorting takes a lot of resources, and grpc server might be affected
+    await(inputSortComplete)
     if (inputPaths.isEmpty) {
       logger.info(s"No Paths to sample from")
       List()
@@ -64,18 +73,13 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
       } finally {
         inputSource.close()
       }
+      logger.info(s"Sampled ${samples.length} records from $path")
       samples
     }
   }
 
   // must call closeRecordsToDistribute on each returned BufferedSource
   def getRecordsToDistribute: Future[List[(BufferedSource, Iterator[Record])]] = async {
-    val inputSortComplete: Future[List[Unit]] =
-      Future.sequence(inputPaths map (path => Future {
-        logger.info(s"Sorting $path started")
-        sortAndSaveToDirectory(path, inputSortedDirectory)
-        logger.info(s"Sorting $path completed")
-      }))
     await(inputSortComplete)
     logger.info(s"Obtaining records to distribute")
     val inputSortedPaths: List[String] = getPathsFromDirectory(inputSortedDirectory)
@@ -166,14 +170,13 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   // sort the file of input path and save it in the output directory
   private def sortAndSaveToDirectory(inputPath: String, outputDirectory: String): Unit = {
     val (inputSource: BufferedSource, inputIterator: Iterator[Record]) = openFile(inputPath)
-    val records: List[Record] = try {
-      inputIterator.toList
+    try {
+      val iteratorInBlock: Iterator[List[Record]] =
+        inputIterator.grouped(RecordConfig.writeBlockNum) map (_.toList)
+      iteratorInBlock foreach (records => saveRecordsToDirectory(outputDirectory, records.sortBy(_.key)))
     } finally {
       inputSource.close()
     }
-
-    val sortedRecords: List[Record] = records.sortBy(_.key)
-    saveRecordsToDirectory(outputDirectory, sortedRecords)
   }
 
   private def openFile(fileName: String): (BufferedSource, Iterator[Record]) = {
