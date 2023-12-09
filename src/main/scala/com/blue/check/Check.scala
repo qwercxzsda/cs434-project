@@ -2,6 +2,9 @@ package com.blue.check
 
 import com.blue.proto.sort.SortCompleteRequest
 import com.typesafe.scalalogging.Logger
+import com.google.protobuf.ByteString
+import com.blue.bytestring_ordering.ByteStringOrdering._
+import scala.math.Ordered.orderingToOrdered
 
 object Check {
   def workerIps(logger: Logger)(num: Int, ips: List[String]): Unit = {
@@ -14,27 +17,20 @@ object Check {
     })
   }
 
-  def ranges(logger: Logger)(num: Int, ranges: List[String]): Unit = {
+  def ranges(logger: Logger)(num: Int, ranges: List[ByteString]): Unit = {
     weakAssert(logger)(num == ranges.length, s"worker num is $num, but ranges length is ${ranges.length}")
 
     // check strongly increasing
-    (ranges foldLeft "")((acc, range) => {
+    (ranges foldLeft ByteString.EMPTY)((acc, range) => {
       weakAssert(logger)(acc < range, s"ranges aren't strongly increasing: $acc, $range")
       range
     })
   }
 
-  def checkMasterResult(logger: Logger)(result: List[SortCompleteRequest]): Unit = {
+  def masterResult(logger: Logger)(result: List[SortCompleteRequest]): Unit = {
     val sortedResult: List[SortCompleteRequest] = result sortBy (_.ip)
-    (sortedResult foldLeft "")((acc: String, workerResult: SortCompleteRequest) => {
-      val minKey: String = workerResult.begin.get.key
-      val maxKey: String = workerResult.end.get.key
-      logger.info(s"worker ${workerResult.ip} minKey: $minKey, maxKey: $maxKey")
-      weakAssert(logger)(minKey <= maxKey, s"minKey is larger than maxKey: $minKey, $maxKey")
-      weakAssert(logger)(acc <= minKey, s"keys aren't increasing: $acc, $minKey")
-      maxKey
-    }
-    )
+    val workerIps: List[String] = sortedResult map (_.ip)
+    Check.workerIps(logger)(sortedResult.length, workerIps)
   }
 
   // Similar to assert, but only logs error and does not throw exception

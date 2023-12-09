@@ -17,6 +17,8 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.3.11" // Must use 1.3.X to run properly on JDK 8
 )
 
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.17" % "test"
+
 scalacOptions += "-Xasync"
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 

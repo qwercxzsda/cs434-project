@@ -11,11 +11,14 @@ import com.blue.network.NetworkConfig
 import com.blue.check.Check
 
 import com.google.protobuf.ByteString
+import com.blue.bytestring_ordering.ByteStringOrdering._
+import scala.math.Ordered.orderingToOrdered
 import io.grpc.{Server, ServerBuilder}
 import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
+import scala.math.Ordering.comparatorToOrdering
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future, Promise, blocking}
@@ -32,14 +35,13 @@ object Master extends App {
   private val registerRequests: ConcurrentLinkedQueue[RegisterRequest] = new ConcurrentLinkedQueue[RegisterRequest]()
   private val registerAllComplete: Promise[Unit] = Promise()
   private val workerIps: Future[List[String]] = getWorkerIps
-  private val ranges: Future[List[String]] = getRanges
-
+  private val ranges: Future[List[ByteString]] = getRanges
+  private val workerChannels: Future[List[ManagedChannel]] = getWorkerChannels
   sendDistributeStart
 
   private val distributeCompleteRequests: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
   private val distributeCompleteAllComplete: Promise[Unit] = Promise()
   private val distributeCompleteWorkerIps: Future[List[String]] = getDistributeCompleteWorkerIps
-
   sendSortStart
 
   private val sortCompleteRequests: ConcurrentLinkedQueue[SortCompleteRequest] = new ConcurrentLinkedQueue[SortCompleteRequest]()
@@ -48,6 +50,7 @@ object Master extends App {
   private val server = ServerBuilder.
     forPort(NetworkConfig.port).
     addService(MasterGrpc.bindService(new MasterImpl, ExecutionContext.global)).
+    asInstanceOf[ServerBuilder[_]].
     build.start
 
   /* All the code above executes asynchronously.
@@ -58,9 +61,13 @@ object Master extends App {
     Await.result(sortCompleteAllComplete.future, Duration.Inf)
   }
   logger.info(s"All the workers finished sorting, MasterComplete")
+  blocking {
+    Await.result(workerChannels, Duration.Inf).foreach(_.shutdown())
+  }
+  server.shutdown()
   private val result: List[SortCompleteRequest] = sortCompleteRequests.asScala.toList
   Check.weakAssertEq(logger)(result.length, workerNum, "result.length is not equal to workerNum")
-  Check.checkMasterResult(logger)(result)
+  Check.masterResult(logger)(result)
 
   private class MasterImpl extends MasterGrpc.Master {
     override def register(request: RegisterRequest): Future[RegisterResponse] = {
@@ -102,7 +109,7 @@ object Master extends App {
     workerIps
   }
 
-  private def getRanges: Future[List[String]] = async {
+  private def getRanges: Future[List[ByteString]] = async {
     await(registerAllComplete.future)
     val keys = for {
       request <- registerRequests.asScala.toList
@@ -118,15 +125,13 @@ object Master extends App {
   private def sendDistributeStart: Future[Unit] = async {
     val workerIps = await(this.workerIps)
     val ranges = await(this.ranges)
-    val workerIpRangeMap: Map[String, String] = (workerIps zip ranges).toMap
-    val channels = workerIps map { ip =>
-      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
-    }
-    val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
+    val workerIpRangeMap: Map[String, ByteString] = (workerIps zip ranges).toMap
+    val channels = await(workerChannels)
+    val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
     val request: DistributeStartRequest = DistributeStartRequest(ranges = workerIpRangeMap)
-    val responses: List[Future[DistributeStartResponse]] = stubs map (_.distributeStart(request))
+    val responses: List[DistributeStartResponse] = blockingStubs map (_.distributeStart(request))
     // No need to wait for responses
-    logger.info(s"Sent distribute start request to all workers(Didn't wait for responses)")
+    logger.info(s"Sent distribute start request to all workers")
     ()
   }
 
@@ -141,14 +146,22 @@ object Master extends App {
 
   private def sendSortStart: Future[Unit] = async {
     val workerIps = await(distributeCompleteWorkerIps)
-    val channels = workerIps map { ip =>
-      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).usePlaintext().build
-    }
-    val stubs: List[WorkerGrpc.WorkerStub] = channels map WorkerGrpc.stub
+    val channels = await(workerChannels)
+    val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
     val request: SortStartRequest = SortStartRequest()
-    val responses: List[Future[SortStartResponse]] = stubs map (_.sortStart(request))
+    val responses: List[SortStartResponse] = blockingStubs map (_.sortStart(request))
     // no need to wait for responses
-    logger.info(s"Sent sort start request to all workers(Didn't wait for responses)")
+    logger.info(s"Sent sort start request to all workers")
     ()
+  }
+
+  private def getWorkerChannels: Future[List[ManagedChannel]] = async {
+    val workerIps: List[String] = await(this.workerIps)
+    val workerChannels: List[ManagedChannel] = workerIps map { ip =>
+      ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).
+        usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
+    }
+    logger.info(s"opened channels to all workers")
+    workerChannels
   }
 }
