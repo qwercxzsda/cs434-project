@@ -3,7 +3,7 @@ ThisBuild / scalaVersion := "2.13.12"
 
 ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", _*) => MergeStrategy.discard
-  case _ => MergeStrategy.first
+  case x => (assembly / assemblyMergeStrategy).value(x)
 }
 
 lazy val commonSettings = Seq(
