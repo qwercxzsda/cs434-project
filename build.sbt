@@ -2,7 +2,7 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "2.13.12"
 
 ThisBuild / assembly / assemblyMergeStrategy := {
-  case PathList("META-INF", _*) => MergeStrategy.discard
+  case PathList("META-INF", _*) => MergeStrategy.concat
   case x => (assembly / assemblyMergeStrategy).value(x)
 }
 
