@@ -12,9 +12,9 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
     val decorateOpenFile: PrivateMethod[(BufferedSource, Iterator[Record])] =
       PrivateMethod[(BufferedSource, Iterator[Record])](Symbol("openFile"))
 
-    val outputDir: String = "src/test/resources/temp"
+    val outputDir: String = "worker/src/test/resources/temp"
     val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
-    val inputPath: String = "src/test/resources/data_simple/single_ascii"
+    val inputPath: String = "worker/src/test/resources/data_simple/single_ascii"
     val (inputSource, inputIterator) = recordFileManipulator invokePrivate decorateOpenFile(inputPath)
     val records: List[Record] = inputIterator.toList
     inputSource.close()
@@ -41,9 +41,9 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
     val decorateOpenFile: PrivateMethod[(BufferedSource, Iterator[Record])] =
       PrivateMethod[(BufferedSource, Iterator[Record])](Symbol("openFile"))
 
-    val outputDir: String = "src/test/resources/temp"
+    val outputDir: String = "worker/src/test/resources/temp"
     val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
-    val inputPath: String = "src/test/resources/data_simple/single"
+    val inputPath: String = "worker/src/test/resources/data_simple/single"
     val (inputSource, inputIterator) = recordFileManipulator invokePrivate decorateOpenFile(inputPath)
     val records: List[Record] = inputIterator.toList
     inputSource.close()
@@ -70,7 +70,7 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
     val decorateMergeSortIterators: PrivateMethod[Iterator[Record]] =
       PrivateMethod[Iterator[Record]](Symbol("mergeSortIterators"))
 
-    val outputDir: String = "src/test/resources/temp"
+    val outputDir: String = "worker/src/test/resources/temp"
     val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
     val list1_ = List(1, 3, 4, 5, 7, 10)
     val list2_ = List(3, 6, 8, 9, 10)
@@ -90,7 +90,7 @@ class RecordFileManipulatorSuite extends AnyFunSuite with PrivateMethodTester {
     val decorateMergeSortIterators: PrivateMethod[Iterator[Record]] =
       PrivateMethod[Iterator[Record]](Symbol("mergeSortIterators"))
 
-    val outputDir: String = "src/test/resources/temp"
+    val outputDir: String = "worker/src/test/resources/temp"
     val recordFileManipulator = new RecordFileManipulator(List(), outputDir)
     val list1 = List(1, 3, 4, 5, 7, 10)
     val list2 = List(3, 6, 8, 9, 10)
