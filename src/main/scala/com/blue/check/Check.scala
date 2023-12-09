@@ -7,11 +7,11 @@ import com.blue.bytestring_ordering.ByteStringOrdering._
 import scala.math.Ordered.orderingToOrdered
 
 object Check {
-  def workerIps(logger: Logger)(num: Int, ips: List[String]): Unit = {
+  def workerIps(logger: Logger)(num: Int, ips: List[(String, Int)]): Unit = {
     weakAssert(logger)(num == ips.length, s"worker num is $num, but worker ips length is ${ips.length}")
 
     // check strongly increasing(This also checks duplicate)
-    (ips foldLeft "")((acc, ip) => {
+    (ips foldLeft ("", 0))((acc, ip) => {
       weakAssert(logger)(acc < ip, s"worker ips aren't strongly increasing: $acc, $ip")
       ip
     })
@@ -28,9 +28,9 @@ object Check {
   }
 
   def masterResult(logger: Logger)(result: List[SortCompleteRequest]): Unit = {
-    val sortedResult: List[SortCompleteRequest] = result sortBy (_.ip)
-    val workerIps: List[String] = sortedResult map (_.ip)
-    Check.workerIps(logger)(sortedResult.length, workerIps)
+    val sortedResult: List[SortCompleteRequest] = result sortBy (address => (address.address.get.ip, address.address.get.port))
+    val workerIps: List[String] = sortedResult map (_.address.get.ip)
+    Check.workerIps(logger)(sortedResult.length, sortedResult map (r => (r.address.get.ip, r.address.get.port)))
   }
 
   // Similar to assert, but only logs error and does not throw exception
