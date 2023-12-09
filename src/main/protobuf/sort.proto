@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "address.proto";
 
 package com.blue.proto;
 
@@ -19,7 +20,7 @@ message SortStartResponse {
  */
 
 message SortCompleteRequest {
-  string ip = 1;
+  Address address = 1;
 }
 
 message SortCompleteResponse {
