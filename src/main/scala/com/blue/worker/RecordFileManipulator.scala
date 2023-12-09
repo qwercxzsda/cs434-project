@@ -102,10 +102,10 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
     val file: File = new File(directory + File.separator + f"partition$num%10d")
     Check.weakAssert(logger)(!file.exists, s"File $file already exists")
 
-    val recordsConcatenated: Array[Byte] = (records foldLeft Array[Byte]()) {
-      (acc, record) => acc ++ record.key.toByteArray ++ record.value.toByteArray
-    }
+    val recordsConcatenated: Array[Byte] =
+      (records flatMap (record => record.key.toByteArray ++ record.value.toByteArray)).toArray
     Files.write(Paths.get(file.getPath), recordsConcatenated)
+    logger.info(s"Saved ${records.length} records to $file")
   }
 
   def sortDistributedRecords(): Unit = {
