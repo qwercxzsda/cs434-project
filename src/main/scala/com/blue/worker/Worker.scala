@@ -8,6 +8,8 @@ import com.blue.proto.master._
 import com.blue.proto.worker._
 import com.blue.network.NetworkConfig
 import com.blue.check.Check
+import com.blue.proto.address.Address
+import com.blue.worker.RecordFileManipulator
 import com.google.protobuf.ByteString
 import com.blue.bytestring_ordering.ByteStringOrdering._
 
@@ -29,6 +31,10 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object Worker extends App {
+  new Worker(NetworkConfig.ip, NetworkConfig.workerPort, args)
+}
+
+class Worker(ip: String, port: Int, args: Array[String]) {
   private val logger: Logger = Logger("Worker")
   private val arguments: Map[String, List[String]] = ArgumentParser.parse(args.toList)
   Check.weakAssert(logger)((arguments("").length == 1) && (arguments("-O").length == 1), s"Too many arguments: $arguments")
@@ -43,7 +49,7 @@ object Worker extends App {
   private val samples: Future[List[Record]] = getSamples
   sendRegister
 
-  private val distributeStartComplete: Promise[Map[String, ByteString]] = Promise()
+  private val distributeStartComplete: Promise[Map[Address, ByteString]] = Promise()
   private val distributeComplete: Future[Unit] = sendDistribute
   sendDistributeComplete
 
@@ -52,7 +58,7 @@ object Worker extends App {
   private val workerComplete: Future[Unit] = sendSortComplete
 
   private val server = ServerBuilder.
-    forPort(NetworkConfig.port).maxInboundMessageSize(4 * RecordConfig.writeBlockSize).
+    forPort(port).maxInboundMessageSize(4 * RecordConfig.writeBlockSize).
     asInstanceOf[ServerBuilder[_]].
     addService(WorkerGrpc.bindService(new WorkerImpl, ExecutionContext.global)).
     asInstanceOf[ServerBuilder[_]].
@@ -61,7 +67,7 @@ object Worker extends App {
   /* All the code above executes asynchronously.
    * As as result, this part of code is reached immediately.
    */
-  logger.info(s"Server started at ${NetworkConfig.ip}:${NetworkConfig.port}")
+  logger.info(s"Server started at ${ip}:${port}")
   blocking {
     Await.result(workerComplete, Duration.Inf)
   }
@@ -72,13 +78,13 @@ object Worker extends App {
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
       logger.info(s"Received DistributeStartRequest with ranges: ${request.ranges}")
-      distributeStartComplete success request.ranges
+      distributeStartComplete success request.ranges.map(range => (range.address.get, range.beginKey)).toMap
       Future(DistributeStartResponse())
     }
 
     override def distribute(request: DistributeRequest): Future[DistributeResponse] = {
       val records = request.records
-      logger.info(s"Received DistributeRequest from ${request.ip} with ${records.size} records")
+      logger.info(s"Received DistributeRequest from ${request.address} with ${records.size} records to ${ip}:${port}")
       recordFileManipulator saveDistributedRecords records
       Future(DistributeResponse())
     }
@@ -94,7 +100,7 @@ object Worker extends App {
     val indexDiv: Int = ipAndPort.indexOf(":")
     Check.weakAssert(logger)(indexDiv != -1, s"ipAndPort doesn't contain ':', ipAndPort: $ipAndPort")
     val port: String = ipAndPort.substring(indexDiv).drop(1)
-    Check.weakAssertEq(logger)(port, NetworkConfig.port.toString, s"port(from argument) is not equal to NetworkConfig.port")
+    Check.weakAssertEq(logger)(port, NetworkConfig.masterPort.toString, s"port(from argument) is not equal to NetworkConfig.port")
     ipAndPort.substring(0, indexDiv)
   }
 
@@ -108,25 +114,25 @@ object Worker extends App {
     val samples: List[Record] = await(this.samples)
     val channel: ManagedChannel = masterChannel
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
-    val request: RegisterRequest = RegisterRequest(ip = NetworkConfig.ip, samples = samples)
+    val request: RegisterRequest = RegisterRequest(address = Some(Address(ip, port)), samples = samples)
     val response: Future[RegisterResponse] = stub.register(request)
-    Check.weakAssertEq(logger)(await(response).ip, masterIp, "await(response).ip is not equal to masterIp")
-    logger.info(s"Sent RegisterRequest to master at $masterIp:${NetworkConfig.port}(Wait for response)")
+    Check.weakAssertEq(logger)(await(response).address.get.ip, masterIp, "await(response).ip is not equal to masterIp")
+    logger.info(s"Sent RegisterRequest to master at $masterIp:${NetworkConfig.masterPort}(Wait for response)")
     ()
   }
 
   // Send Distribute(i.e., send block of records) request to designated worker
   // This distributes(shuffles) records among workers
   private def sendDistribute: Future[Unit] = async {
-    val ranges: Map[String, ByteString] = await(distributeStartComplete.future)
-    val workerIps: List[String] = ranges.keys.toList
+    val ranges: Map[Address, ByteString] = await(distributeStartComplete.future)
+    val workerIps: List[Address] = ranges.keys.toList
     val rangeBegins: List[ByteString] = ranges.values.toList
     val (toClose: List[BufferedSource], recordsToDistribute: List[Iterator[Record]]) =
       await(recordFileManipulator.getRecordsToDistribute).unzip
     try {
       logger.info(s"Sending DistributeRequest for all samples to designated workers(Distribution started)")
       val channels = workerIps map { ip =>
-        ManagedChannelBuilder.forAddress(ip, NetworkConfig.port).
+        ManagedChannelBuilder.forAddress(ip.ip, ip.port).
           usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
       }
       val blockingStubs: List[WorkerGrpc.WorkerBlockingStub] = channels map WorkerGrpc.blockingStub
@@ -138,7 +144,7 @@ object Worker extends App {
           val designatedWorker: Int = getDesignatedWorker(records.head)
           val (send: List[Record], remain: List[Record]) = records span (record => designatedWorker == getDesignatedWorker(record))
           val blockingStub: WorkerGrpc.WorkerBlockingStub = blockingStubs(designatedWorker)
-          val request: DistributeRequest = DistributeRequest(ip = NetworkConfig.ip, records = send)
+          val request: DistributeRequest = DistributeRequest(address = Some(Address(ip, port)), records = send)
           val response: DistributeResponse = blockingStub.distribute(request)
           distributeOneBlock(remain)
         }
@@ -171,10 +177,11 @@ object Worker extends App {
   // This notifies master that this worker has finished distributing all records
   private def sendDistributeComplete: Future[Unit] = async {
     await(distributeComplete)
+    logger.info(s"Distribution complete")
     val channel: ManagedChannel = masterChannel
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
-    val request: DistributeCompleteRequest = DistributeCompleteRequest(ip = NetworkConfig.ip)
-    val response: Future[DistributeCompleteResponse] = stub.distributeComplete(request)
+    val request: DistributeCompleteRequest = DistributeCompleteRequest(address = Some(Address(ip, port)))
+    val response: DistributeCompleteResponse = await(stub.distributeComplete(request))
     // No need to wait for response
     logger.info(s"Sent DistributeCompleteRequest to master(Didn't wait for response)")
     ()
@@ -194,10 +201,9 @@ object Worker extends App {
     await(sortComplete)
     val channel: ManagedChannel = masterChannel
     val stub: MasterGrpc.MasterStub = MasterGrpc.stub(channel)
-    val request: SortCompleteRequest = SortCompleteRequest(ip = NetworkConfig.ip)
+    val request: SortCompleteRequest = SortCompleteRequest(address = Some(Address(ip, port)))
     val response: Future[SortCompleteResponse] = stub.sortComplete(request)
 
-    logger.info(s"Sort complete")
     // Must wait for response
     await(response)
     logger.info(s"Sent SortCompleteRequest to master(Wait for response)")
@@ -205,7 +211,7 @@ object Worker extends App {
   }
 
   private def getMasterChannel: ManagedChannel = {
-    ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.port).
+    ManagedChannelBuilder.forAddress(masterIp, NetworkConfig.masterPort).
       usePlaintext().asInstanceOf[ManagedChannelBuilder[_]].build
   }
 }
