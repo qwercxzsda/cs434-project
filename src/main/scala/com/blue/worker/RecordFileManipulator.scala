@@ -99,7 +99,7 @@ class RecordFileManipulator(inputDirectories: List[String], outputDirectory: Str
   private def saveRecordsToDirectory(directory: String, records: Seq[Record]): Unit = {
     Check.weakAssert(logger)(savedHistory.contains(directory), s"Directory $directory not found in savedHistory $savedHistory")
     val num: Int = savedHistory(directory).getAndIncrement()
-    val file: File = new File(directory + File.separator + f"partition$num%10d")
+    val file: File = new File(directory + File.separator + f"partition$num%010d")
     Check.weakAssert(logger)(!file.exists, s"File $file already exists")
 
     val recordsConcatenated: Array[Byte] =
