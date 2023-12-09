@@ -1,3 +1,6 @@
+master.jar
+worker.jar
+
 # From https://alvinalexander.com/source-code/scala/sample-gitignore-file-scala-sbt-intellij-eclipse/
 
 # bloop and metals

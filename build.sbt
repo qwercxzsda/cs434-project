@@ -34,14 +34,16 @@ lazy val utils = (project in file("utils"))
 lazy val master = (project in file("master"))
   .settings(commonSettings)
   .settings(
-    assembly / assemblyJarName := "master.jar"
+    assembly / assemblyJarName := "master.jar",
+    assembly / assemblyOutputPath := file("master.jar")
   )
   .dependsOn(utils)
 
 lazy val worker = (project in file("worker"))
   .settings(commonSettings)
   .settings(
-    assembly / assemblyJarName := "worker.jar"
+    assembly / assemblyJarName := "worker.jar",
+    assembly / assemblyOutputPath := file("worker.jar")
   )
   .dependsOn(utils)
 
