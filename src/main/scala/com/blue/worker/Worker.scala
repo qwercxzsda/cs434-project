@@ -40,7 +40,7 @@ object Worker extends App {
 
   private val masterChannel: ManagedChannel = getMasterChannel
 
-  private val samples: Future[List[Record]] = getSamples
+  private val samples: Future[List[Record]] = recordFileManipulator.getSamples
   sendRegister
 
   private val distributeStartComplete: Promise[Map[String, ByteString]] = Promise()
@@ -96,11 +96,6 @@ object Worker extends App {
     val port: String = ipAndPort.substring(indexDiv).drop(1)
     Check.weakAssertEq(logger)(port, NetworkConfig.port.toString, s"port(from argument) is not equal to NetworkConfig.port")
     ipAndPort.substring(0, indexDiv)
-  }
-
-  private def getSamples: Future[List[Record]] = async {
-    logger.info(s"Sampling started")
-    recordFileManipulator.getSamples
   }
 
   // Send Register request to master
