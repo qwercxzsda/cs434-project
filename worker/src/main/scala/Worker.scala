@@ -18,6 +18,7 @@ import io.grpc.{ManagedChannel, ManagedChannelBuilder, StatusRuntimeException}
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.jdk.CollectionConverters._
 import scala.io.BufferedSource
+import scala.collection.immutable.SortedMap
 import com.typesafe.scalalogging.Logger
 
 import scala.annotation.tailrec
@@ -43,7 +44,7 @@ object Worker extends App {
   private val samples: Future[List[Record]] = recordFileManipulator.getSamples
   sendRegister
 
-  private val distributeStartComplete: Promise[Map[String, ByteString]] = Promise()
+  private val distributeStartComplete: Promise[SortedMap[String, ByteString]] = Promise()
   private val distributeComplete: Future[Unit] = sendDistribute
   sendDistributeComplete
 
@@ -72,7 +73,7 @@ object Worker extends App {
   private class WorkerImpl extends WorkerGrpc.Worker {
     override def distributeStart(request: DistributeStartRequest): Future[DistributeStartResponse] = {
       logger.info(s"Received DistributeStartRequest with ranges: ${request.ranges}")
-      distributeStartComplete success request.ranges
+      distributeStartComplete success request.ranges.to(SortedMap)
       Future(DistributeStartResponse())
     }
 
@@ -113,7 +114,7 @@ object Worker extends App {
   // Send Distribute(i.e., send block of records) request to designated worker
   // This distributes(shuffles) records among workers
   private def sendDistribute: Future[Unit] = async {
-    val ranges: Map[String, ByteString] = await(distributeStartComplete.future)
+    val ranges: SortedMap[String, ByteString] = await(distributeStartComplete.future)
     val workerIps: List[String] = ranges.keys.toList
     val rangeBegins: List[ByteString] = ranges.values.toList
     val (toClose: List[BufferedSource], recordsToDistribute: List[Iterator[Record]]) =
