@@ -95,10 +95,25 @@ For master and worker to run properly, port `30962` must be free(not in use). If
 <img width="546" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/df5720cb-89e1-4fa3-824b-5c81376762f9">
 <img width="552" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/a5276ca1-afdf-47a0-9c44-cb1d3c4fa0dd">
 
-### Test large2(No duplicates)
+### Test Large2(no duplicates)
 
 1 Master
 4 Workers each with 100,000,000 = 100 M Records(100 M * 100 B = 10 GB)
 
 #### Result
 
+##### Input
+
+Created using the below code on each workers.
+
+```bash
+gensort -b[start_index] [number] partition0
+```
+
+For examble, on worker 3,
+
+```bash
+gensort -b200000000 100000000
+```
+
+##### Output
