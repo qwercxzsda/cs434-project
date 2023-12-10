@@ -14,3 +14,7 @@
 
 - Add README.md
 - Performed various tests(see README.md)
+
+## Next week
+
+- Make project presentation & report
