@@ -59,7 +59,8 @@ For master and worker to run properly, port `30962` must be free(not in use). If
 ### Test Large
 
 1 Master\
-4 Workers each with 20000 * 2490 = 49.8 M Records(49.8 M * 100 B = 4.98 GB)
+4 Workers each with 20000 * 2490 = 49.8 M Records(49.8 M * 100 B = 4.98 GB)\
+Total 49.8 M * 4 = 199.2 M Records(199.2 M * 100 B = 19.92 GB)
 
 <img width="1490" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/8b2a014e-4893-4c99-98a9-5da185d60df0">
 <img width="1490" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/474382ed-3640-4e88-836e-fa308254c958">
@@ -77,7 +78,8 @@ For master and worker to run properly, port `30962` must be free(not in use). If
 ### Test Simple
 
 1 Master\
-2 Workers each with 2 Records(2 * 100 B = 200 B)
+2 Workers each with 2 Records(2 * 100 B = 200 B)\
+Total 2 * 2 = 4 Records(4 * 100 B = 400 B)
 
 <img width="1495" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/ca9829cf-005b-498f-871d-bb719ebbd6de">
 <img width="1491" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/8beb2b5b-f1cf-4d1b-a0e2-e1d069f05701">
@@ -98,7 +100,8 @@ For master and worker to run properly, port `30962` must be free(not in use). If
 ### Test Large2(no duplicates)
 
 1 Master\
-4 Workers, 1 directory, each directory with 100,000,000 = 100 M Records(100 M * 100 B = 10 GB)
+4 Workers, 1 directory, each directory with 100,000,000 = 100 M Records(100 M * 100 B = 10 GB)\
+Totla 100 M * 4 = 400 M Records(400 M * 100 B = 40 GB)
 
 #### Result
 
@@ -134,7 +137,8 @@ All sorted, no duplicates
 ### Test Large3(no duplicates)
 
 1 Master\
-8 Workers, 3 directories, each directory with 100,000 = 100 K Records(100 K * 100 B = 10 MB)
+8 Workers, 3 directories, each directory with 100,000 = 100 K Records(100 K * 100 B = 10 MB)\
+Total 100 K * 3 * 8 = 2.4 M Records(2.4 M * 100 B = 240 MB)
 
 #### Result
 
