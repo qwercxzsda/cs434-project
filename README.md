@@ -58,7 +58,7 @@ For master and worker to run properly, port `30962` must be free(not in use). If
 
 ### Test Large
 
-1 Master
+1 Master\
 4 Workers each with 20000 * 2490 = 49.8 M Records(49.8 M * 100 B = 4.98 GB)
 
 <img width="1490" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/8b2a014e-4893-4c99-98a9-5da185d60df0">
@@ -76,7 +76,7 @@ For master and worker to run properly, port `30962` must be free(not in use). If
 
 ### Test Simple
 
-1 Master
+1 Master\
 2 Workers each with 2 Records(2 * 100 B = 200 B)
 
 <img width="1495" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/ca9829cf-005b-498f-871d-bb719ebbd6de">
@@ -97,12 +97,14 @@ For master and worker to run properly, port `30962` must be free(not in use). If
 
 ### Test Large2(no duplicates)
 
-1 Master
+1 Master\
 4 Workers each with 100,000,000 = 100 M Records(100 M * 100 B = 10 GB)
 
 #### Result
 
 ##### Input
+
+100,000,000 * 4 = 400 M Records
 
 Created using the below code on each workers.
 
@@ -117,3 +119,14 @@ gensort -b200000000 100000000
 ```
 
 ##### Output
+
+99586002 + 94949919 + 107194027 + 98270052 = 400,000,000 = 400 M
+
+All sorted, no duplicates
+
+<img width="1492" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/2af3133e-642d-4ff7-a5f9-fe6386aa6fe1">
+<img width="1491" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/d8c28a37-8275-49d2-83ee-109d02421662">
+<img width="499" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/90e2c32c-3198-4952-922c-3dcfda8aa192">
+<img width="500" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/9c4bbd1b-77f0-40c4-8c0d-75536eab58b1">
+<img width="495" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/640e4060-a37e-4bf4-954c-7edc3228db23">
+<img width="497" alt="image" src="https://github.com/qwercxzsda/cs434-project/assets/101696461/923e0962-b5cf-4df8-8839-6b22edc7a703">
