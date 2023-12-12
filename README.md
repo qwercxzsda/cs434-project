@@ -2,7 +2,8 @@
 
 ## Overview
 
-This is a git repository for CS434-AdvancedProgramming at POSTECH.\
+This is a git repository for CS434-AdvancedProgramming at POSTECH.
+
 This repository implements the final project which is distributed sorting using multiple servers.
 
 ## Usage
@@ -24,6 +25,8 @@ Two files `master.jar` and `worker.jar` will be created at the project root dire
 
 ### Run `Master`
 
+Run the following code.
+
 ```bash
 java -jar master.jar [worker_number]
 ```
@@ -36,10 +39,10 @@ java -jar master.jar 1
 
 ### Run `Worker`
 
-Use `30962` for `master_port`. See below for more information.
+Run the following code. Use `30962` for `master_port`. See below for more information.
 
 ```bash
-java -jar worker.jar [master_ip:master_port] -I [input_directory1] [input_directory2] ... -O [output_directory]
+java -jar worker.jar [master_ip]:[master_port] -I [input_directory1] [input_directory2] ... -O [output_directory]
 ```
 
 For examble,
@@ -48,11 +51,15 @@ For examble,
 java -jar worker.jar 2.2.2.142:30962 -I /home/blue/test2/input_dir -O /home/blue/test2/output_dir
 ```
 
+Output will be created in the `output_directory` as `partition*`.
+
+Disregard the `tmp1`, `tmp2` folders created in the `output_directory`. These are not part of the output. They are temporary files used during the `worker` execution.
+
 ### Caution
 
 `master_port` is always assumed to be `30962`. If you use other number as `master_port` it will just be disregarded.
 
-For master and worker to run properly, port `30962` must be free(not in use). If you really need to change the port as  port `30962` is already in use, change the variable `NetworkConfig.port` in the file `cs434-project/utils/src/main/scala/NetworkConfig.scala` and run `sbt assembly` again.
+For master and worker to run properly, port `30962` must be free(not in use). If you really need to change the port as  port `30962` is already in use, change the variable `NetworkConfig.port` in the file `cs434-project/utils/src/main/scala/NetworkConfig.scala` and run `sbt assembly` again(for both `master` and `worker`).
 
 ## Tests
 
