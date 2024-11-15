@@ -6,6 +6,10 @@ This is a git repository for CS434-AdvancedProgramming at POSTECH.
 
 This repository implements the final project which is distributed sorting using multiple servers.
 
+You can find the implementation details [here](./docs/Final%20Presentation.pdf).
+
+Among three teams Red, Blue, and Green, our team (Blue) achieved the best performance by a significant margin. You can find the final results [here](./docs/Final%20Results.pdf).
+
 ## Usage
 
 Clone the git repository.
